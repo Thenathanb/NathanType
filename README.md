@@ -142,7 +142,7 @@ Click the Settings button in the header to customize:
 
 ## Features Roadmap
 
-### Phase 1: Core MVP ✅
+### Phase 1: Core MVP 
 - [x] Basic typing test with time mode
 - [x] Real-time WPM and accuracy
 - [x] Results display
