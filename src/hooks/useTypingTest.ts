@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTestStore } from '../stores/testStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useUserStore } from '../stores/userStore';
 import type { TypedWord, TestResult, WpmDataPoint } from '../types/index.js';
 import { getCharStates, calculateAllStats, calculateWpm, calculateRawWpm, calculateAccuracy } from '../utils/calculateStats';
-import { generateTestWords } from '../utils/wordGenerator';
+import { generateTestWords, generateWords } from '../utils/wordGenerator';
+import { getPbKey } from '../stores/userStore';
+
+const ZEN_APPEND_THRESHOLD = 30; // append more words when this many left
 
 export function useTypingTest() {
   const {
@@ -17,46 +20,140 @@ export function useTypingTest() {
     startTime,
     isActive,
     isComplete,
-    config,
+    customText,
     setWords,
+    appendWords,
     setCurrentWordIndex,
     addTypedWord,
     startTest,
-    endTest,
+    cancelTest,
     resetTest,
-    setCurrentResult,
     addWpmDataPoint,
     clearWpmHistory,
     wpmHistory,
+    setQuoteSource,
   } = useTestStore();
 
   const {
-    quickRestart,
     stopOnError,
     confidenceMode,
     quickEnd,
     difficulty,
+    soundEnabled,
+    errorSoundEnabled,
+    punctuation,
+    numbers,
   } = useSettingsStore();
 
-  const { addTestResult, updateUserStats } = useUserStore();
+  const { addTestResult, updateUserStats, checkAndUpdatePersonalBest } = useUserStore();
 
   const [currentInput, setCurrentInput] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
-  const [tabPressed, setTabPressed] = useState(false);
 
   const timerRef = useRef<number>();
   const wpmTrackerRef = useRef<number>();
+  const soundsRef = useRef<{ playKeySound: (v?: number) => void; playErrorSound: (v?: number) => void } | null>(null);
+
+  // Lazy-load sounds module to avoid AudioContext issues on initial render
+  useEffect(() => {
+    import('../utils/sounds').then((mod) => {
+      soundsRef.current = mod;
+    });
+  }, []);
+
+  // Live WPM — computed on every render from current typedHistory + elapsed time
+  const liveWpm = useMemo(() => {
+    if (!isActive || !startTime || typedHistory.length === 0) return 0;
+    const elapsed = Date.now() - startTime;
+    return calculateWpm(typedHistory, elapsed);
+  }, [isActive, startTime, typedHistory, currentInput]); // currentInput dep triggers recalc on each key
 
   // Initialize words on mount or when config changes
   useEffect(() => {
+    if (mode === 'custom' && customText) {
+      setWords(customText.trim().split(/\s+/));
+      setQuoteSource(null);
+      return;
+    }
+
+    if (mode === 'quote') {
+      import('../utils/wordGenerator').then(({ getQuote }) => {
+        const { words: qWords, source } = getQuote('medium');
+        setWords(qWords);
+        setQuoteSource(source);
+      });
+      return;
+    }
+
     const newWords = generateTestWords(mode, {
       wordLimit,
       timeLimit,
-      punctuation: config.punctuation,
-      numbers: config.numbers,
+      punctuation,
+      numbers,
     });
     setWords(newWords);
-  }, [mode, wordLimit, timeLimit, config.punctuation, config.numbers]);
+    setQuoteSource(null);
+  }, [mode, wordLimit, timeLimit, punctuation, numbers, customText]);
+
+  // Zen mode: append more words when running low
+  useEffect(() => {
+    if (mode !== 'zen' || !isActive) return;
+    const remaining = words.length - currentWordIndex;
+    if (remaining < ZEN_APPEND_THRESHOLD) {
+      appendWords(generateWords(100, { punctuation, numbers }));
+    }
+  }, [mode, isActive, currentWordIndex, words.length, punctuation, numbers]);
+
+  // Keep a stable ref to mode/settings for use inside intervals
+  const settingsRef = useRef({ mode, timeLimit, wordLimit, punctuation, numbers, difficulty });
+  useEffect(() => {
+    settingsRef.current = { mode, timeLimit, wordLimit, punctuation, numbers, difficulty };
+  });
+
+  const handleTestComplete = useCallback(() => {
+    // Use getState() to read fresh store values — avoids stale closure from interval capture
+    const state = useTestStore.getState();
+    if (!state.startTime) return;
+
+    const endTime = Date.now();
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current);
+    state.endTest();
+
+    const { typedHistory: th, wpmHistory: wh, startTime: st } = state;
+    const stats = calculateAllStats(th, wh, st!, endTime);
+
+    const s = settingsRef.current;
+    const resultConfig = {
+      mode: s.mode,
+      timeLimit: s.timeLimit,
+      wordLimit: s.wordLimit,
+      language: 'english',
+      punctuation: s.punctuation,
+      numbers: s.numbers,
+      difficulty: s.difficulty,
+    };
+
+    const pbKey = getPbKey(resultConfig);
+    const isNewPb = checkAndUpdatePersonalBest(pbKey, stats.wpm, stats.accuracy, stats.consistency);
+
+    const result: TestResult = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      config: resultConfig,
+      stats,
+      wpmHistory: wh,
+      typedHistory: th,
+    };
+
+    state.setCurrentResult(result, isNewPb);
+    addTestResult(result);
+    updateUserStats(stats.wpm, stats.accuracy, stats.timeElapsed);
+  }, [checkAndUpdatePersonalBest, addTestResult, updateUserStats]);
+
+  // Keep a stable ref so intervals always call the latest version
+  const handleTestCompleteRef = useRef(handleTestComplete);
+  useEffect(() => { handleTestCompleteRef.current = handleTestComplete; });
 
   // Timer for time mode
   useEffect(() => {
@@ -64,109 +161,64 @@ export function useTypingTest() {
       timerRef.current = window.setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            handleTestComplete();
+            handleTestCompleteRef.current();
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-
-      return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-      };
+      return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }
   }, [mode, isActive, isComplete]);
 
-  // WPM tracker (update every second)
+  // WPM tracker — reads fresh store values via getState() so interval is stable
   useEffect(() => {
-    if (isActive && !isComplete && startTime) {
+    if (isActive && !isComplete) {
       wpmTrackerRef.current = window.setInterval(() => {
-        const now = Date.now();
-        const elapsed = now - startTime;
-
-        const wpm = calculateWpm(typedHistory, elapsed);
-        const rawWpm = calculateRawWpm(typedHistory, elapsed);
-        const accuracy = calculateAccuracy(typedHistory);
-
+        const { typedHistory: th, wpmHistory: wh, startTime: st } = useTestStore.getState();
+        if (!st) return;
+        const elapsed = Date.now() - st;
         const dataPoint: WpmDataPoint = {
           time: elapsed / 1000,
-          wpm,
-          rawWpm,
-          accuracy,
+          wpm: calculateWpm(th, elapsed),
+          rawWpm: calculateRawWpm(th, elapsed),
+          accuracy: calculateAccuracy(th),
         };
-
         addWpmDataPoint(dataPoint);
       }, 1000);
-
-      return () => {
-        if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current);
-      };
+      return () => { if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current); };
     }
-  }, [isActive, isComplete, startTime, typedHistory]);
+  }, [isActive, isComplete]);
 
-  // Handle test completion
-  const handleTestComplete = useCallback(() => {
-    if (!startTime) return;
-
-    const endTime = Date.now();
-    endTest();
-
-    // Calculate final stats
-    const stats = calculateAllStats(typedHistory, wpmHistory, startTime, endTime);
-
-    // Create result
-    const result: TestResult = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-      config,
-      stats,
-      wpmHistory,
-      typedHistory,
-    };
-
-    setCurrentResult(result);
-    addTestResult(result);
-    updateUserStats(stats.wpm, stats.accuracy, stats.timeElapsed);
-  }, [startTime, typedHistory, wpmHistory, config, endTest, setCurrentResult, addTestResult, updateUserStats]);
-
-  // Check if test should end
+  // Word mode / custom / quote end detection
   useEffect(() => {
-    if (!isActive || isComplete) return;
-
-    // Word mode: check if we've completed all words
-    if (mode === 'words' && currentWordIndex >= words.length) {
+    if (!isActive || isComplete || mode === 'zen') return;
+    if ((mode === 'words' || mode === 'custom' || mode === 'quote') && currentWordIndex >= words.length) {
       handleTestComplete();
     }
-
-    // Quick end: check if we've typed the last word
     if (quickEnd && currentWordIndex === words.length - 1 && currentInput.length > 0) {
       handleTestComplete();
     }
-  }, [mode, currentWordIndex, words.length, currentInput, isActive, isComplete, quickEnd, handleTestComplete]);
+  }, [mode, currentWordIndex, words.length, currentInput, isActive, isComplete, quickEnd]);
 
-  // Handle key press
-  const handleKeyPress = useCallback((key: string) => {
-    // Start test on first keypress
-    if (!isActive && !isComplete) {
-      startTest();
-      clearWpmHistory();
-      setTimeRemaining(timeLimit);
-    }
-
-    // Tab handling for restart
-    if (key === 'Tab') {
-      setTabPressed(true);
+  const handleKeyPress = useCallback((key: string, isError = false) => {
+    // Escape — cancel the test
+    if (key === 'Escape') {
+      handleCancel();
       return;
     }
 
-    if (key === 'Enter' && tabPressed && quickRestart) {
+    // Tab — restart immediately (Monkeytype default)
+    if (key === 'Tab') {
       handleRestart();
       return;
     }
 
-    // Reset tab pressed if any other key
-    if (key !== 'Tab') {
-      setTabPressed(false);
+    // Start on first real keypress
+    if (!isActive && !isComplete && key !== 'Backspace') {
+      startTest();
+      clearWpmHistory();
+      setTimeRemaining(timeLimit);
     }
 
     if (!isActive || isComplete) return;
@@ -174,101 +226,108 @@ export function useTypingTest() {
     const currentWord = words[currentWordIndex];
     if (!currentWord) return;
 
-    // Handle backspace
     if (key === 'Backspace') {
-      if (confidenceMode === 'full') return; // No backspace allowed
-      if (confidenceMode === 'partial' && currentInput.length === 0) return; // Can't go back to previous word
-
+      if (confidenceMode === 'full') return;
+      if (confidenceMode === 'partial' && currentInput.length === 0) return;
+      if (soundEnabled && soundsRef.current) soundsRef.current.playKeySound(0.15);
       setCurrentInput((prev) => prev.slice(0, -1));
       return;
     }
 
-    // Handle space (word completion)
     if (key === ' ') {
-      if (currentInput.length === 0) return; // Don't allow empty words
+      if (currentInput.length === 0) return;
 
-      // Check for errors in current word
       const hasError = currentInput !== currentWord;
+      if (difficulty === 'expert' && hasError) { handleRestart(); return; }
 
-      // Expert mode: fail on incorrect word
-      if (difficulty === 'expert' && hasError) {
-        handleRestart();
-        return;
-      }
+      if (soundEnabled && soundsRef.current) soundsRef.current.playKeySound();
 
-      // Create typed word record
       const typedWord: TypedWord = {
         word: currentWord,
         typed: currentInput,
         charStates: getCharStates(currentWord, currentInput),
         timestamp: Date.now(),
-        duration: 0, // TODO: track per-word timing
+        duration: 0,
       };
-
       addTypedWord(typedWord);
       setCurrentInput('');
       setCurrentWordIndex(currentWordIndex + 1);
-
-      // Check if this was the last word - the effect will handle completion
       return;
     }
 
-    // Regular character input
     const newInput = currentInput + key;
 
-    // Master mode: fail on any incorrect character
     if (difficulty === 'master') {
-      const isCorrect = currentWord.startsWith(newInput);
-      if (!isCorrect) {
+      if (!currentWord.startsWith(newInput)) {
+        if (errorSoundEnabled && soundsRef.current) soundsRef.current.playErrorSound();
         handleRestart();
         return;
       }
     }
 
-    // Stop on error (letter mode)
     if (stopOnError === 'letter') {
-      const charIndex = currentInput.length;
-      if (currentWord[charIndex] !== key) {
-        return; // Don't allow incorrect character
+      const expected = currentWord[currentInput.length];
+      if (expected !== key) {
+        if (errorSoundEnabled && soundsRef.current) soundsRef.current.playErrorSound();
+        return;
+      }
+    }
+
+    const charIsWrong = isError || (currentWord[currentInput.length] !== undefined && currentWord[currentInput.length] !== key);
+    if (soundEnabled && soundsRef.current) {
+      if (charIsWrong && errorSoundEnabled) {
+        soundsRef.current.playErrorSound();
+      } else {
+        soundsRef.current.playKeySound();
       }
     }
 
     setCurrentInput(newInput);
   }, [
-    isActive,
-    isComplete,
-    words,
-    currentWordIndex,
-    currentInput,
-    tabPressed,
-    quickRestart,
-    confidenceMode,
-    difficulty,
-    stopOnError,
-    timeLimit,
+    isActive, isComplete, words, currentWordIndex, currentInput,
+    confidenceMode, difficulty, stopOnError, timeLimit,
+    soundEnabled, errorSoundEnabled,
   ]);
 
-  // Restart test
   const handleRestart = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current);
     resetTest();
     setCurrentInput('');
     setTimeRemaining(timeLimit);
-    setTabPressed(false);
 
-    // Generate new words
-    const newWords = generateTestWords(mode, {
-      wordLimit,
-      timeLimit,
-      punctuation: config.punctuation,
-      numbers: config.numbers,
-    });
+    if (mode === 'quote') {
+      import('../utils/wordGenerator').then(({ getQuote }) => {
+        const { words: qWords, source } = getQuote('medium');
+        setWords(qWords);
+        setQuoteSource(source);
+      });
+      return;
+    }
+    if (mode === 'custom' && customText) {
+      setWords(customText.trim().split(/\s+/));
+      return;
+    }
+    const newWords = generateTestWords(mode, { wordLimit, timeLimit, punctuation, numbers });
     setWords(newWords);
-  }, [mode, wordLimit, timeLimit, config]);
+  }, [mode, wordLimit, timeLimit, punctuation, numbers, customText]);
+
+  const handleCancel = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current);
+    cancelTest();
+    setCurrentInput('');
+    setTimeRemaining(timeLimit);
+    const newWords = generateTestWords(mode, { wordLimit, timeLimit, punctuation, numbers });
+    setWords(newWords);
+  }, [mode, wordLimit, timeLimit, punctuation, numbers]);
 
   return {
     currentInput,
     timeRemaining,
+    liveWpm,
     handleKeyPress,
     handleRestart,
+    handleCancel,
   };
 }
