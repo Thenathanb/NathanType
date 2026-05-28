@@ -226,4 +226,4 @@ If you encounter any issues or have questions, please open an issue on GitHub.
 
 ---
 
-**Built with ❤️ by Nathan** • [GitHub](https://github.com/yourusername) • [Portfolio](https://yourportfolio.com)
+**Built by Nathan** • [GitHub](https://github.com/yourusername) • [Portfolio](https://yourportfolio.com)
