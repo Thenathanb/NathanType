@@ -34,3 +34,22 @@ export function getThemeById(themeId: string): Theme | undefined {
 export function getAllThemes(): Theme[] {
   return themes;
 }
+
+export const FONTS: { id: string; label: string; stack: string }[] = [
+  { id: 'Roboto Mono',     label: 'Roboto Mono',     stack: "'Roboto Mono', monospace" },
+  { id: 'JetBrains Mono',  label: 'JetBrains Mono',  stack: "'JetBrains Mono', monospace" },
+  { id: 'Fira Code',       label: 'Fira Code',        stack: "'Fira Code', monospace" },
+  { id: 'Source Code Pro', label: 'Source Code Pro',  stack: "'Source Code Pro', monospace" },
+  { id: 'IBM Plex Mono',   label: 'IBM Plex Mono',    stack: "'IBM Plex Mono', monospace" },
+  { id: 'Inconsolata',     label: 'Inconsolata',      stack: "'Inconsolata', monospace" },
+  { id: 'Space Mono',      label: 'Space Mono',       stack: "'Space Mono', monospace" },
+  { id: 'Ubuntu Mono',     label: 'Ubuntu Mono',      stack: "'Ubuntu Mono', monospace" },
+];
+
+export function applyFont(fontId: string) {
+  const font = FONTS.find((f) => f.id === fontId);
+  document.documentElement.style.setProperty(
+    '--font-family',
+    font ? font.stack : "'Roboto Mono', monospace"
+  );
+}

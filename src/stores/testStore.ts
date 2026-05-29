@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { TestState, TestMode, TypedWord, TestConfig, TestResult, WpmDataPoint } from '../types/index.js';
 
 interface TestStore extends TestState {
@@ -54,7 +55,9 @@ const initialState: TestState = {
   config: defaultConfig,
 };
 
-export const useTestStore = create<TestStore>((set) => ({
+export const useTestStore = create<TestStore>()(
+  persist(
+    (set) => ({
   ...initialState,
   quoteSource: null,
   customText: null,
@@ -129,4 +132,15 @@ export const useTestStore = create<TestStore>((set) => ({
   })),
 
   clearWpmHistory: () => set({ wpmHistory: [] }),
-}));
+    }),
+    {
+      name: 'nathantype-test-config',
+      // Only persist the user's mode/limit choices — never persist active test state
+      partialize: (state) => ({
+        mode: state.mode,
+        timeLimit: state.timeLimit,
+        wordLimit: state.wordLimit,
+      }),
+    }
+  )
+);

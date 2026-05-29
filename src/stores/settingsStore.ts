@@ -27,6 +27,7 @@ const defaultSettings: Settings = {
   quickRestart: true,
   blindMode: false,
   focusMode: false,
+  showCurrentWordLine: true,
   stopOnError: 'off',
   confidenceMode: 'off',
   quickEnd: false,

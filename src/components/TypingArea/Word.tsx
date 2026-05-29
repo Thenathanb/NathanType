@@ -11,40 +11,45 @@ interface WordProps {
 }
 
 export function Word({ word, typed, charStates, isActive, isPast, wordRef }: WordProps) {
-  const { blindMode } = useSettingsStore();
-
+  const { blindMode, showCurrentWordLine } = useSettingsStore();
   const hasError = isPast && typed !== word;
 
   return (
     <div
       ref={wordRef}
-      className={`inline-block mr-3 mb-2 ${
-        isActive ? 'border-b-2 border-accent' : ''
-      } ${hasError ? 'border-b-2 border-error border-opacity-60' : ''}`}
+      style={{
+        display: 'inline-block',
+        marginRight: '0.6em',
+        borderBottom: isActive && showCurrentWordLine
+          ? '2px solid var(--accent)'
+          : hasError
+          ? '2px solid #ca475460'
+          : 'none',
+      }}
     >
       {word.split('').map((char, index) => {
         const state = charStates[index] || 'pending';
         const typedChar = typed[index];
 
-        let colorClass = 'text-text-secondary'; // pending
+        let color = '#646669'; // pending
 
         if (!blindMode) {
-          if (state === 'correct') colorClass = 'text-correct';
-          else if (state === 'incorrect' || state === 'extra') colorClass = 'text-error';
+          if (state === 'correct') color = '#d1d0ce';
+          else if (state === 'incorrect' || state === 'extra') color = '#ca4754';
         } else {
-          if (typedChar !== undefined) colorClass = 'text-text-primary';
+          if (typedChar !== undefined) color = '#d1d0ce';
         }
 
         return (
-          <span key={index} className={`${colorClass} transition-colors duration-75`}>
-            {typedChar !== undefined ? typedChar : char}
+          <span key={index} style={{ color, transition: 'color 0.05s' }}>
+            {char}
           </span>
         );
       })}
       {/* Extra characters typed beyond word length */}
       {typed.length > word.length &&
         typed.slice(word.length).split('').map((char, index) => (
-          <span key={`extra-${index}`} className="text-error">
+          <span key={`extra-${index}`} style={{ color: '#ca4754' }}>
             {char}
           </span>
         ))}

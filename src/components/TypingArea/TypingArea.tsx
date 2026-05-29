@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Word } from './Word';
-import { Caret } from './Caret';
 import { useTestStore } from '../../stores/testStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { getCharStates } from '../../utils/calculateStats';
@@ -10,79 +9,88 @@ interface TypingAreaProps {
   currentInput: string;
 }
 
-const VISIBLE_ROWS = 3;
-
 export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
-  const {
-    words,
-    currentWordIndex,
-    typedHistory,
-    isActive,
-    isComplete,
-    mode,
-    quoteSource,
-  } = useTestStore();
-
-  const { fontSize, focusMode } = useSettingsStore();
+  const { words, currentWordIndex, typedHistory, isActive, isComplete, mode, quoteSource } = useTestStore();
+  const { fontSize, caretStyle, smoothCaret } = useSettingsStore();
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<HTMLDivElement>(null);
   const currentWordRef = useRef<HTMLDivElement>(null);
-  const lineHeightRef = useRef(0);
-  const [translateY, setTranslateY] = useState(0);
-  const [caretPos, setCaretPos] = useState({ left: 0, top: 0, height: 24 });
 
-  // Focus input on mount and when test resets
+  const [translateX, setTranslateX] = useState(0);
+  const [caretLeft, setCaretLeft] = useState(0);
+  const [caretVisible, setCaretVisible] = useState(true);
+
+  const charWidthRef = useRef(0);
+  // Keep a mutable copy of translateX so the scroll effect always reads the latest value
+  // without needing translateX as a dep (which would cause an infinite loop)
+  const translateXRef = useRef(0);
+
+  // Focus on mount and restart
   useEffect(() => {
     if (!isComplete) inputRef.current?.focus();
   }, [isComplete, words]);
 
-  // Measure line height once after words render
+  // Measure char width (monospace — all chars same width)
   useLayoutEffect(() => {
     if (!wordsRef.current || words.length === 0) return;
-    const firstEl = wordsRef.current.children[0] as HTMLElement | null;
-    if (!firstEl) return;
-    const style = window.getComputedStyle(firstEl);
-    const mb = parseFloat(style.marginBottom) || 8;
-    lineHeightRef.current = firstEl.offsetHeight + mb;
+    const firstWord = wordsRef.current.children[0] as HTMLElement | null;
+    if (!firstWord) return;
+    const span = document.createElement('span');
+    const style = window.getComputedStyle(firstWord);
+    span.style.cssText = `visibility:hidden;position:absolute;font-family:${style.fontFamily};font-size:${style.fontSize};font-weight:${style.fontWeight}`;
+    span.textContent = 'a';
+    document.body.appendChild(span);
+    charWidthRef.current = span.offsetWidth;
+    document.body.removeChild(span);
   }, [words, fontSize]);
 
-  // Row-based scrolling: keep current word on row 1 (Monkeytype style)
+  // Update horizontal scroll + caret position on each character typed
   useEffect(() => {
-    if (!currentWordRef.current || !lineHeightRef.current) return;
-    const wordOffsetTop = currentWordRef.current.offsetTop;
-    const lh = lineHeightRef.current;
-    const row = Math.round(wordOffsetTop / lh);
-    setTranslateY(row >= 1 ? -(row - 1) * lh : 0);
-  }, [currentWordIndex]);
+    if (!currentWordRef.current || !containerRef.current || !charWidthRef.current) return;
 
-  // Reset scroll on restart
+    const wordLeft = currentWordRef.current.offsetLeft;
+    const charLeft = wordLeft + currentInput.length * charWidthRef.current;
+    const containerWidth = containerRef.current.offsetWidth;
+    const target = containerWidth * 0.35;
+
+    // Read from ref (not stale closure) so both values are computed consistently
+    const curTx = translateXRef.current;
+    const visualCaretLeft = charLeft - curTx;
+
+    let newTx = curTx;
+    if (visualCaretLeft > target) {
+      newTx = curTx + (visualCaretLeft - target);
+    } else if (visualCaretLeft < target * 0.5 && curTx > 0) {
+      newTx = Math.max(0, curTx - (target * 0.5 - visualCaretLeft));
+    }
+
+    translateXRef.current = newTx;
+    setTranslateX(newTx);
+    setCaretLeft(charLeft - newTx); // caret and scroll always agree
+  }, [currentWordIndex, currentInput, words]);
+
+  // Reset on restart
   useEffect(() => {
-    if (!isActive && !isComplete) setTranslateY(0);
+    if (!isActive && !isComplete) {
+      translateXRef.current = 0;
+      setTranslateX(0);
+      setCaretLeft(0);
+    }
   }, [isActive, isComplete, words]);
 
-  // Caret positioning (getBoundingClientRect accounts for CSS transform)
+  // Caret blink
   useEffect(() => {
-    if (!currentWordRef.current || !wordsRef.current) return;
-    const wordEl = currentWordRef.current;
-    const containerEl = wordsRef.current.parentElement!;
+    if (caretStyle === 'off') return;
+    const id = setInterval(() => setCaretVisible(v => !v), 530);
+    return () => clearInterval(id);
+  }, [caretStyle]);
 
-    const wordRect = wordEl.getBoundingClientRect();
-    const containerRect = containerEl.getBoundingClientRect();
-
-    const span = document.createElement('span');
-    span.style.cssText = `visibility:hidden;position:absolute;font:${window.getComputedStyle(wordEl).font}`;
-    span.textContent = currentInput || '';
-    document.body.appendChild(span);
-    const textWidth = span.offsetWidth;
-    document.body.removeChild(span);
-
-    setCaretPos({
-      left: wordRect.left - containerRect.left + textWidth,
-      top: wordRect.top - containerRect.top,
-      height: wordRect.height,
-    });
-  }, [currentInput, currentWordIndex, words, translateY]);
+  // Reset blink on keypress (keep visible while typing)
+  useEffect(() => {
+    setCaretVisible(true);
+  }, [currentInput, currentWordIndex]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -91,33 +99,32 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === ' ') { e.preventDefault(); onKeyPress(' '); }
+    if (e.key === ' ')              { e.preventDefault(); onKeyPress(' '); }
     else if (e.key === 'Backspace') { e.preventDefault(); onKeyPress('Backspace'); }
-    else if (e.key === 'Tab') { e.preventDefault(); onKeyPress('Tab'); }
-    else if (e.key === 'Enter') { e.preventDefault(); onKeyPress('Enter'); }
-    else if (e.key === 'Escape') { e.preventDefault(); onKeyPress('Escape'); }
+    else if (e.key === 'Tab')       { e.preventDefault(); onKeyPress('Tab'); }
+    else if (e.key === 'Enter')     { e.preventDefault(); onKeyPress('Enter'); }
+    else if (e.key === 'Escape')    { e.preventDefault(); onKeyPress('Escape'); }
   };
 
-  const fontSizeClasses: Record<string, string> = {
-    small: 'text-lg',
-    medium: 'text-2xl',
-    large: 'text-3xl',
-    'extra-large': 'text-4xl',
+  const fontSizeMap: Record<string, string> = {
+    small: '20px',
+    medium: '32px',
+    large: '42px',
+    'extra-large': '52px',
   };
 
   const currentWord = words[currentWordIndex];
   const charStates = currentWord ? getCharStates(currentWord, currentInput) : [];
-  const containerHeight = lineHeightRef.current * VISIBLE_ROWS || 150;
+  const fontSizePx = parseFloat(fontSizeMap[fontSize] || '22px');
 
   return (
-    <div
-      className={`relative w-full max-w-4xl mx-auto ${focusMode ? '' : ''}`}
-      onClick={() => inputRef.current?.focus()}
-    >
+    <div style={{ width: '680px', maxWidth: '90vw' }}>
+      {/* Typing capture input (hidden) */}
       <input
         ref={inputRef}
         type="text"
-        className="hidden-input"
+        className="typing-capture-input"
+        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         autoComplete="off"
@@ -125,89 +132,92 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
         autoCorrect="off"
         spellCheck={false}
         disabled={isComplete}
-        aria-label="Typing input"
       />
 
-      {/* Clipping container — fixed height, 3 rows */}
+      {/* Clipping container */}
       <div
-        className={`relative overflow-hidden cursor-pointer ${fontSizeClasses[fontSize]} font-mono`}
-        style={{ height: containerHeight || undefined }}
+        ref={containerRef}
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          width: '100%',
+          height: `${fontSizePx * 2}px`,
+          cursor: 'text',
+        }}
+        onClick={() => inputRef.current?.focus()}
       >
-        {/* Scrolling words container */}
+        {/* Scrolling words row */}
         <div
           ref={wordsRef}
-          className="leading-relaxed no-select"
           style={{
-            transform: `translateY(${translateY}px)`,
-            transition: 'transform 0.15s ease-out',
+            whiteSpace: 'nowrap',
+            position: 'absolute',
+            top: '50%',
+            transform: `translateX(${-translateX}px) translateY(-50%)`,
+            transition: smoothCaret ? 'transform 0.1s ease-out' : 'none',
+            fontSize: fontSizeMap[fontSize] || '22px',
+            lineHeight: '1.8',
+            fontFamily: 'var(--font-family, "Roboto Mono"), monospace',
           }}
         >
-          {words.map((word, wordIndex) => {
+          {words.map((word, wi) => {
             let typed = '';
             let states = word.split('').map(() => 'pending' as const);
 
-            if (wordIndex < currentWordIndex && typedHistory[wordIndex]) {
-              typed = typedHistory[wordIndex].typed;
-              states = typedHistory[wordIndex].charStates;
-            } else if (wordIndex === currentWordIndex) {
+            if (wi < currentWordIndex && typedHistory[wi]) {
+              typed = typedHistory[wi].typed;
+              states = typedHistory[wi].charStates;
+            } else if (wi === currentWordIndex) {
               typed = currentInput;
               states = charStates;
             }
 
             return (
               <Word
-                key={`${word}-${wordIndex}`}
+                key={`${word}-${wi}`}
                 word={word}
                 typed={typed}
                 charStates={states}
-                isActive={wordIndex === currentWordIndex && isActive}
-                isPast={wordIndex < currentWordIndex}
-                wordRef={wordIndex === currentWordIndex ? currentWordRef : undefined}
+                isActive={wi === currentWordIndex && isActive}
+                isPast={wi < currentWordIndex}
+                wordRef={wi === currentWordIndex ? currentWordRef : undefined}
               />
             );
           })}
         </div>
 
         {/* Caret */}
-        {isActive && !isComplete && (
-          <Caret left={caretPos.left} top={caretPos.top} height={caretPos.height} />
+        {isActive && !isComplete && caretStyle !== 'off' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              left: `${caretLeft}px`,
+              width: 2,
+              height: `${fontSizePx * 1.3}px`,
+              backgroundColor: 'var(--caret-color)',
+              opacity: caretVisible ? 1 : 0,
+              transition: smoothCaret ? 'left 0.06s ease-out' : 'none',
+              pointerEvents: 'none',
+              borderRadius: 1,
+            }}
+          />
         )}
-
-        {/* Top fade to hide scrolled rows */}
-        <div
-          className="absolute top-0 left-0 right-0 pointer-events-none"
-          style={{
-            height: '2px',
-            background: 'linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%)',
-          }}
-        />
       </div>
 
       {/* Quote attribution */}
       {mode === 'quote' && quoteSource && (
-        <div className="text-right text-text-secondary text-sm mt-3 italic">
+        <div style={{ color: '#646669', fontSize: 13, textAlign: 'right', marginTop: 12, fontStyle: 'italic' }}>
           — {quoteSource}
         </div>
       )}
 
-      {/* Custom mode info */}
-      {mode === 'custom' && (
-        <div className="text-right text-text-secondary text-sm mt-3">
-          custom text
-        </div>
-      )}
-
-      {/* Instructions */}
+      {/* Not-started prompt */}
       {!isActive && !isComplete && (
-        <p className="text-center text-text-secondary text-sm mt-6">
-          start typing to begin &nbsp;·&nbsp; <kbd className="opacity-60">Tab</kbd> to restart &nbsp;·&nbsp; <kbd className="opacity-60">Esc</kbd> to cancel
-        </p>
-      )}
-
-      {isActive && !isComplete && (
-        <p className="text-center text-text-secondary text-sm mt-4 opacity-40">
-          <kbd>Tab</kbd> restart &nbsp;·&nbsp; <kbd>Esc</kbd> cancel
-        </p>
+        <div style={{ color: '#646669', fontSize: 13, textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-family)' }}>
+          click here or start typing
+        </div>
       )}
     </div>
   );

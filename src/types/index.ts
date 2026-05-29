@@ -113,6 +113,7 @@ export interface Settings {
   quickRestart: boolean; // Tab + Enter or just Tab
   blindMode: boolean; // hide error highlighting
   focusMode: boolean; // dim everything except typing area
+  showCurrentWordLine: boolean; // underline the active word
   stopOnError: 'off' | 'letter' | 'word';
   confidenceMode: 'off' | 'partial' | 'full'; // disable backspace
   quickEnd: boolean; // end immediately when last word typed

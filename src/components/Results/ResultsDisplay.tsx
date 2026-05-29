@@ -17,17 +17,25 @@ export function ResultsDisplay({ onRestart }: ResultsDisplayProps) {
   const pb = personalBests[pbKey];
 
   const modeLabel = config.mode === 'time'
-    ? `${config.timeLimit}s`
+    ? `time ${config.timeLimit}`
     : config.mode === 'words'
-    ? `${config.wordLimit} words`
+    ? `words ${config.wordLimit}`
     : config.mode;
 
+  const testTypeLabel = `${modeLabel} · ${config.language}${config.punctuation ? ' · punctuation' : ''}${config.numbers ? ' · numbers' : ''}`;
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+    <div className="w-full max-w-4xl mx-auto px-4 py-8" style={{ animation: 'fadeIn 0.2s ease-out' }}>
+
+      {/* Test type label */}
+      <div className="text-center mb-6 font-mono" style={{ color: '#646669', fontSize: 13 }}>
+        {testTypeLabel}
+      </div>
+
       {/* New PB banner */}
       {isNewPersonalBest && (
-        <div className="text-center mb-6 text-accent font-bold text-lg animate-pulse">
-          ★ New Personal Best! ★
+        <div className="text-center mb-6 font-mono font-bold" style={{ color: '#e2b714', fontSize: 16 }}>
+          new personal best
         </div>
       )}
 
@@ -43,37 +51,37 @@ export function ResultsDisplay({ onRestart }: ResultsDisplayProps) {
       <WpmChart data={wpmHistory} />
 
       {/* Detail cards */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-sm">
         {/* Characters */}
-        <div className="bg-bg-secondary rounded-xl p-4">
-          <div className="text-text-secondary mb-3 text-xs uppercase tracking-wider">characters</div>
+        <div className="rounded-xl p-4" style={{ backgroundColor: '#323437' }}>
+          <div className="mb-3 uppercase tracking-wider" style={{ color: '#646669', fontSize: 11 }}>characters</div>
           <div className="space-y-1.5">
-            <Row label="correct" value={stats.correctChars} color="text-correct" />
-            <Row label="incorrect" value={stats.incorrectChars} color="text-error" />
-            <Row label="extra" value={stats.extraChars} color="text-error" />
-            <Row label="missed" value={stats.missedChars} color="text-text-secondary" />
+            <Row label="correct"   value={stats.correctChars}   color="#d1d0ce" />
+            <Row label="incorrect" value={stats.incorrectChars} color="#ca4754" />
+            <Row label="extra"     value={stats.extraChars}     color="#ca4754" />
+            <Row label="missed"    value={stats.missedChars}    color="#646669" />
           </div>
         </div>
 
         {/* Test info */}
-        <div className="bg-bg-secondary rounded-xl p-4">
-          <div className="text-text-secondary mb-3 text-xs uppercase tracking-wider">test</div>
+        <div className="rounded-xl p-4" style={{ backgroundColor: '#323437' }}>
+          <div className="mb-3 uppercase tracking-wider" style={{ color: '#646669', fontSize: 11 }}>test</div>
           <div className="space-y-1.5">
-            <Row label="mode" value={modeLabel} />
+            <Row label="mode"     value={modeLabel} />
             <Row label="language" value={config.language} />
-            <Row label="time" value={`${stats.timeElapsed}s`} />
+            <Row label="time"     value={`${stats.timeElapsed}s`} />
             {config.punctuation && <Row label="punctuation" value="on" />}
-            {config.numbers && <Row label="numbers" value="on" />}
+            {config.numbers     && <Row label="numbers"     value="on" />}
           </div>
         </div>
 
         {/* Personal best */}
-        <div className="bg-bg-secondary rounded-xl p-4">
-          <div className="text-text-secondary mb-3 text-xs uppercase tracking-wider">personal best</div>
+        <div className="rounded-xl p-4" style={{ backgroundColor: '#323437' }}>
+          <div className="mb-3 uppercase tracking-wider" style={{ color: '#646669', fontSize: 11 }}>personal best</div>
           {pb ? (
             <div className="space-y-1.5">
-              <Row label="wpm" value={pb.wpm} color={isNewPersonalBest ? 'text-accent' : undefined} />
-              <Row label="accuracy" value={`${pb.accuracy}%`} />
+              <Row label="wpm"         value={pb.wpm}           color={isNewPersonalBest ? '#e2b714' : undefined} />
+              <Row label="accuracy"    value={`${pb.accuracy}%`} />
               <Row label="consistency" value={`${pb.consistency}%`} />
               <Row
                 label="date"
@@ -81,7 +89,7 @@ export function ResultsDisplay({ onRestart }: ResultsDisplayProps) {
               />
             </div>
           ) : (
-            <div className="text-text-secondary text-sm">no data yet</div>
+            <div style={{ color: '#646669', fontSize: 13 }}>no data yet</div>
           )}
         </div>
       </div>
@@ -90,7 +98,15 @@ export function ResultsDisplay({ onRestart }: ResultsDisplayProps) {
       <div className="flex gap-4 justify-center mt-8">
         <button
           onClick={onRestart}
-          className="px-8 py-3 bg-accent text-bg-primary font-bold rounded-xl hover:opacity-90 transition-opacity text-sm"
+          className="font-mono transition-opacity hover:opacity-80"
+          style={{
+            backgroundColor: '#323437',
+            color: '#e2b714',
+            borderRadius: 8,
+            padding: '10px 32px',
+            fontSize: 14,
+            border: 'none',
+          }}
         >
           next test
         </button>
@@ -99,14 +115,22 @@ export function ResultsDisplay({ onRestart }: ResultsDisplayProps) {
             const text = `${stats.wpm} WPM | ${stats.accuracy}% accuracy | NathanType`;
             navigator.clipboard?.writeText(text).catch(() => {});
           }}
-          className="px-8 py-3 bg-bg-secondary text-text-secondary rounded-xl hover:text-text-primary transition-colors text-sm"
+          className="font-mono transition-opacity hover:opacity-80"
+          style={{
+            backgroundColor: '#323437',
+            color: '#646669',
+            borderRadius: 8,
+            padding: '10px 32px',
+            fontSize: 14,
+            border: 'none',
+          }}
         >
           copy result
         </button>
       </div>
 
-      <p className="text-center text-text-secondary text-xs mt-4 opacity-50">
-        Tab to restart
+      <p className="text-center font-mono mt-4" style={{ color: '#646669', fontSize: 12, opacity: 0.6 }}>
+        tab to restart
       </p>
     </div>
   );
@@ -114,20 +138,28 @@ export function ResultsDisplay({ onRestart }: ResultsDisplayProps) {
 
 function StatBlock({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
-    <div className="text-center">
-      <div className={`text-5xl font-bold mb-1 ${accent ? 'text-accent' : 'text-text-primary'}`}>
+    <div className="text-center font-mono">
+      <div
+        className="tabular-nums mb-1"
+        style={{
+          fontSize: 52,
+          fontWeight: 700,
+          color: accent ? '#e2b714' : '#d1d0ce',
+          lineHeight: 1,
+        }}
+      >
         {value}
       </div>
-      <div className="text-text-secondary text-xs uppercase tracking-widest">{label}</div>
+      <div className="uppercase tracking-widest" style={{ color: '#646669', fontSize: 11 }}>{label}</div>
     </div>
   );
 }
 
 function Row({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
-    <div className="flex justify-between">
-      <span className="text-text-secondary">{label}</span>
-      <span className={color || 'text-text-primary'}>{value}</span>
+    <div className="flex justify-between font-mono" style={{ fontSize: 13 }}>
+      <span style={{ color: '#646669' }}>{label}</span>
+      <span style={{ color: color || '#d1d0ce' }}>{value}</span>
     </div>
   );
 }

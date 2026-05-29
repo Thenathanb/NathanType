@@ -4,14 +4,18 @@
 
 :root {
   /* Default theme (Serika Dark) */
-  --bg-primary: #323437;
-  --bg-secondary: #2c2e31;
-  --text-primary: #e2b714;
+  --bg-primary: #2c2e31;
+  --bg-secondary: #323437;
+  --text-primary: #d1d0ce;
   --text-secondary: #646669;
   --accent: #e2b714;
   --error: #ca4754;
-  --correct: #e2b714;
+  --correct: #d1d0ce;
   --caret-color: #e2b714;
+}
+
+html, body, #root {
+  height: 100%;
 }
 
 * {
@@ -21,10 +25,10 @@
 }
 
 body {
-  font-family: 'Roboto Mono', monospace;
+  font-family: var(--font-family, 'Roboto Mono'), monospace;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  overflow-x: hidden;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -78,4 +82,12 @@ body {
   pointer-events: none;
   width: 0;
   height: 0;
+}
+
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.caret-blink {
+  animation: caret-blink 1s step-end infinite;
 }

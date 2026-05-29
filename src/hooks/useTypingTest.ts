@@ -68,6 +68,11 @@ export function useTypingTest() {
     return calculateWpm(typedHistory, elapsed);
   }, [isActive, startTime, typedHistory, currentInput]); // currentInput dep triggers recalc on each key
 
+  const liveAccuracy = useMemo(() => {
+    if (!isActive || typedHistory.length === 0) return 100;
+    return calculateAccuracy(typedHistory);
+  }, [isActive, typedHistory, currentInput]);
+
   // Initialize words on mount or when config changes
   useEffect(() => {
     if (mode === 'custom' && customText) {
@@ -215,13 +220,16 @@ export function useTypingTest() {
     }
 
     // Start on first real keypress
+    let justStarted = false;
     if (!isActive && !isComplete && key !== 'Backspace') {
       startTest();
       clearWpmHistory();
       setTimeRemaining(timeLimit);
+      justStarted = true;
     }
 
-    if (!isActive || isComplete) return;
+    // isActive is the stale closure value — use justStarted to not drop the first character
+    if ((!isActive && !justStarted) || isComplete) return;
 
     const currentWord = words[currentWordIndex];
     if (!currentWord) return;
@@ -283,6 +291,21 @@ export function useTypingTest() {
     }
 
     setCurrentInput(newInput);
+
+    // Auto-end: finish instantly when the last character of the last word is typed
+    const isLastWord = mode !== 'time' && mode !== 'zen' && currentWordIndex === words.length - 1;
+    if (isLastWord && newInput === currentWord) {
+      const finalWord: TypedWord = {
+        word: currentWord,
+        typed: newInput,
+        charStates: getCharStates(currentWord, newInput),
+        timestamp: Date.now(),
+        duration: 0,
+      };
+      addTypedWord(finalWord);
+      // Small timeout so the last character renders before results appear
+      setTimeout(() => handleTestCompleteRef.current(), 50);
+    }
   }, [
     isActive, isComplete, words, currentWordIndex, currentInput,
     confidenceMode, difficulty, stopOnError, timeLimit,
@@ -326,6 +349,7 @@ export function useTypingTest() {
     currentInput,
     timeRemaining,
     liveWpm,
+    liveAccuracy,
     handleKeyPress,
     handleRestart,
     handleCancel,

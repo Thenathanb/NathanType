@@ -2,13 +2,13 @@
   {
     "id": "serika-dark",
     "name": "Serika Dark",
-    "bgPrimary": "#323437",
-    "bgSecondary": "#2c2e31",
-    "textPrimary": "#e2b714",
+    "bgPrimary": "#2c2e31",
+    "bgSecondary": "#323437",
+    "textPrimary": "#d1d0ce",
     "textSecondary": "#646669",
     "accent": "#e2b714",
     "error": "#ca4754",
-    "correct": "#e2b714",
+    "correct": "#d1d0ce",
     "caretColor": "#e2b714"
   },
   {

@@ -4,142 +4,169 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { CustomTextModal } from '../TypingArea/CustomTextModal';
 import type { TestMode } from '../../types/index.js';
 
+const PILL_BG = 'var(--bg-secondary)';
+const DIVIDER = 'var(--text-secondary)';
+const DEFAULT_COLOR = 'var(--text-secondary)';
+const HOVER_COLOR = 'var(--text-primary)';
+const ACTIVE_BG = 'var(--bg-primary)';
+const ACTIVE_COLOR = 'var(--accent)';
+
 export function ModeSelector() {
-  const {
-    mode, timeLimit, wordLimit,
-    setMode, setTimeLimit, setWordLimit,
-    setCustomText, isActive,
-  } = useTestStore();
+  const { mode, timeLimit, wordLimit, setMode, setTimeLimit, setWordLimit, setCustomText, isActive } = useTestStore();
   const { punctuation, numbers, updateSettings } = useSettingsStore();
   const [showCustomModal, setShowCustomModal] = useState(false);
 
-  if (isActive) return null; // hide during test (clean Monkeytype style)
-
-  const modes: { value: TestMode; label: string }[] = [
-    { value: 'time', label: 'time' },
-    { value: 'words', label: 'words' },
-    { value: 'quote', label: 'quote' },
-    { value: 'zen', label: 'zen' },
-    { value: 'custom', label: 'custom' },
-  ];
+  if (isActive) return null;
 
   const timeLimits = [15, 30, 60, 120];
   const wordLimits = [10, 25, 50, 100];
 
-  const handleModeChange = (m: TestMode) => {
-    if (m === 'custom') {
-      setShowCustomModal(true);
-    }
-    setMode(m);
-  };
+  const modes: { value: TestMode; label: string; icon: React.ReactNode }[] = [
+    { value: 'time',   label: 'time',   icon: <IconClock /> },
+    { value: 'words',  label: 'words',  icon: <IconText /> },
+    { value: 'quote',  label: 'quote',  icon: <IconQuote /> },
+    { value: 'zen',    label: 'zen',    icon: <IconLeaf /> },
+    { value: 'custom', label: 'custom', icon: <IconPencil /> },
+  ];
 
-  const handleCustomSubmit = (text: string) => {
-    setCustomText(text);
-    setMode('custom');
+  const handleModeClick = (m: TestMode) => {
+    if (m === 'custom') setShowCustomModal(true);
+    setMode(m);
   };
 
   return (
     <>
-      <div className="flex flex-col gap-3 items-center mb-8">
-        {/* Toggles (punctuation / numbers) */}
-        {(mode === 'time' || mode === 'words' || mode === 'zen') && (
-          <div className="flex gap-4 items-center text-sm">
-            <button
-              onClick={() => updateSettings({ punctuation: !punctuation })}
-              className={`transition-all ${
-                punctuation ? 'text-accent font-semibold' : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              @ punctuation
-            </button>
-            <button
-              onClick={() => updateSettings({ numbers: !numbers })}
-              className={`transition-all ${
-                numbers ? 'text-accent font-semibold' : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              # numbers
-            </button>
-          </div>
-        )}
+      <div
+        className="flex items-center gap-0.5 font-mono"
+        style={{
+          backgroundColor: PILL_BG,
+          borderRadius: 8,
+          padding: '4px 6px',
+          fontSize: 12,
+        }}
+      >
+        {/* Group 1: toggles */}
+        <PillBtn
+          label="@ punctuation"
+          active={punctuation}
+          onClick={() => updateSettings({ punctuation: !punctuation })}
+        />
+        <PillBtn
+          label="# numbers"
+          active={numbers}
+          onClick={() => updateSettings({ numbers: !numbers })}
+        />
 
-        {/* Mode tabs */}
-        <div className="flex gap-1 bg-bg-secondary rounded-lg p-1">
-          {modes.map((m) => (
-            <button
-              key={m.value}
-              onClick={() => handleModeChange(m.value)}
-              className={`px-4 py-1.5 rounded-md text-sm transition-all ${
-                mode === m.value
-                  ? 'bg-accent text-bg-primary font-semibold'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <Divider />
 
-        {/* Time / word sub-options */}
-        {mode === 'time' && (
-          <div className="flex gap-3 text-sm">
-            {timeLimits.map((limit) => (
-              <button
-                key={limit}
-                onClick={() => setTimeLimit(limit)}
-                className={`px-2 py-0.5 rounded transition-all ${
-                  timeLimit === limit
-                    ? 'text-accent font-bold'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {limit}
-              </button>
+        {/* Group 2: modes */}
+        {modes.map(m => (
+          <PillBtn
+            key={m.value}
+            label={m.label}
+            active={mode === m.value}
+            icon={m.icon}
+            onClick={() => handleModeClick(m.value)}
+          />
+        ))}
+
+        {/* Group 3: count selectors */}
+        {(mode === 'time' || mode === 'words') && (
+          <>
+            <Divider />
+            {(mode === 'time' ? timeLimits : wordLimits).map(n => (
+              <PillBtn
+                key={n}
+                label={String(n)}
+                active={(mode === 'time' ? timeLimit : wordLimit) === n}
+                onClick={() => mode === 'time' ? setTimeLimit(n) : setWordLimit(n)}
+              />
             ))}
-          </div>
-        )}
-
-        {mode === 'words' && (
-          <div className="flex gap-3 text-sm">
-            {wordLimits.map((limit) => (
-              <button
-                key={limit}
-                onClick={() => setWordLimit(limit)}
-                className={`px-2 py-0.5 rounded transition-all ${
-                  wordLimit === limit
-                    ? 'text-accent font-bold'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {limit}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {mode === 'quote' && (
-          <p className="text-text-secondary text-xs">random quote from the library</p>
-        )}
-
-        {mode === 'zen' && (
-          <p className="text-text-secondary text-xs">type freely · no timer · no end</p>
-        )}
-
-        {mode === 'custom' && (
-          <button
-            onClick={() => setShowCustomModal(true)}
-            className="text-text-secondary text-xs hover:text-accent transition-colors"
-          >
-            edit custom text ›
-          </button>
+          </>
         )}
       </div>
 
       <CustomTextModal
         isOpen={showCustomModal}
         onClose={() => setShowCustomModal(false)}
-        onSubmit={handleCustomSubmit}
+        onSubmit={(text) => { setCustomText(text); setMode('custom'); }}
       />
     </>
+  );
+}
+
+function PillBtn({
+  label, active, onClick, icon,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-2.5 py-0.5 rounded transition-colors font-mono"
+      style={{
+        backgroundColor: active ? ACTIVE_BG : 'transparent',
+        color: active ? ACTIVE_COLOR : DEFAULT_COLOR,
+        borderRadius: 5,
+        fontSize: 12,
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.color = HOVER_COLOR; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.color = DEFAULT_COLOR; }}
+    >
+      {icon && <span style={{ opacity: 0.8 }}>{icon}</span>}
+      {label}
+    </button>
+  );
+}
+
+function Divider() {
+  return (
+    <div
+      className="mx-1 shrink-0"
+      style={{ width: 1, height: 18, backgroundColor: DIVIDER, opacity: 0.3 }}
+    />
+  );
+}
+
+// ── Icons (12×12) ────────────────────────────────────────────────
+function IconClock() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+function IconText() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+    </svg>
+  );
+}
+function IconQuote() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
+      <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
+    </svg>
+  );
+}
+function IconLeaf() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
+      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+    </svg>
+  );
+}
+function IconPencil() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    </svg>
   );
 }
