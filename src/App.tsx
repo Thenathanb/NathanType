@@ -163,7 +163,7 @@ function App() {
       >
         {/* Left links */}
         <div className="flex gap-4">
-          {['contact', 'support', 'github', 'discord', 'twitter'].map(link => (
+          {['bryce', 'is', 'a', 'lightskin', 'pussy nigger'].map(link => (
             <a key={link} href="#" className="hover:text-text-primary transition-colors no-underline" style={{ color: '#646669' }}>
               {link}
             </a>
