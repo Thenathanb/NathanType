@@ -51,7 +51,7 @@ function App() {
           onClick={() => isActive ? handleCancel() : handleRestart()}
           className="flex flex-col leading-none hover:opacity-70 transition-opacity text-left"
         >
-          <span className="text-text-secondary font-mono" style={{ fontSize: 11 }}>nathantype</span>
+          <span className="text-text-secondary font-mono" style={{ fontSize: 11 }}>anthony is a bitch </span>
           <span className="text-accent font-mono font-medium" style={{ fontSize: 20 }}>NathanType</span>
         </button>
 
