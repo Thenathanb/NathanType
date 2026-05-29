@@ -30,7 +30,6 @@ export function useTypingTest() {
     resetTest,
     addWpmDataPoint,
     clearWpmHistory,
-    wpmHistory,
     setQuoteSource,
   } = useTestStore();
 
@@ -50,8 +49,8 @@ export function useTypingTest() {
   const [currentInput, setCurrentInput] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
 
-  const timerRef = useRef<number>();
-  const wpmTrackerRef = useRef<number>();
+  const timerRef = useRef<number | undefined>(undefined);
+  const wpmTrackerRef = useRef<number | undefined>(undefined);
   const soundsRef = useRef<{ playKeySound: (v?: number) => void; playErrorSound: (v?: number) => void } | null>(null);
 
   // Lazy-load sounds module to avoid AudioContext issues on initial render
@@ -180,7 +179,7 @@ export function useTypingTest() {
   useEffect(() => {
     if (isActive && !isComplete) {
       wpmTrackerRef.current = window.setInterval(() => {
-        const { typedHistory: th, wpmHistory: wh, startTime: st } = useTestStore.getState();
+        const { typedHistory: th, startTime: st } = useTestStore.getState();
         if (!st) return;
         const elapsed = Date.now() - st;
         const dataPoint: WpmDataPoint = {

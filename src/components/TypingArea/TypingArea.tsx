@@ -3,6 +3,7 @@ import { Word } from './Word';
 import { useTestStore } from '../../stores/testStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { getCharStates } from '../../utils/calculateStats';
+import type { CharState } from '../../types/index.js';
 
 interface TypingAreaProps {
   onKeyPress: (key: string) => void;
@@ -162,7 +163,7 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
         >
           {words.map((word, wi) => {
             let typed = '';
-            let states = word.split('').map(() => 'pending' as const);
+            let states: CharState[] = word.split('').map(() => 'pending' as const);
 
             if (wi < currentWordIndex && typedHistory[wi]) {
               typed = typedHistory[wi].typed;

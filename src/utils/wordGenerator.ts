@@ -32,7 +32,7 @@ export function generateWords(
     numbers?: boolean;
   } = {}
 ): string[] {
-  const { language = 'english', punctuation = false, numbers = false } = options;
+  const { punctuation = false, numbers = false } = options;
 
   // For now, we only support English
   const wordList = english200;

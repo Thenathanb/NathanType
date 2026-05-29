@@ -7,7 +7,7 @@ interface WordProps {
   charStates: CharState[];
   isActive: boolean;
   isPast?: boolean;
-  wordRef?: React.RefObject<HTMLDivElement>;
+  wordRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function Word({ word, typed, charStates, isActive, isPast, wordRef }: WordProps) {
