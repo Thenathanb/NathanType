@@ -133,6 +133,12 @@ export function generateTestWords(
       // Custom text will be set separately
       return [];
 
+    // content / meme / songs — words loaded asynchronously in useTypingTest
+    case 'content':
+    case 'meme':
+    case 'songs':
+      return [];
+
     default:
       return generateWords(25);
   }

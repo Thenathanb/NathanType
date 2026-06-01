@@ -5,6 +5,35 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>nathantype</title>
+    <!-- Apply saved theme before React mounts to prevent flash of wrong colors -->
+    <script>
+      (function () {
+        try {
+          var v = JSON.parse(localStorage.getItem('nt-theme-vars') || 'null');
+          if (!v) return;
+          var r = document.documentElement.style;
+          r.setProperty('--bg',             v.bg);
+          r.setProperty('--bg2',            v.bg2);
+          r.setProperty('--main',           v.main);
+          r.setProperty('--text',           v.text);
+          r.setProperty('--sub',            v.sub);
+          r.setProperty('--error',          v.error);
+          r.setProperty('--bg-primary',     v.bg);
+          r.setProperty('--bg-secondary',   v.bg2);
+          r.setProperty('--accent',         v.main);
+          r.setProperty('--text-primary',   v.text);
+          r.setProperty('--text-secondary', v.sub);
+          r.setProperty('--correct',        v.text);
+          r.setProperty('--caret-color',    v.main);
+          // Restore saved font
+          var ff = localStorage.getItem('nt-font-family');
+          if (ff) {
+            r.setProperty('--font-mono',   ff);
+            r.setProperty('--font-family', ff);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Inconsolata:wght@400;700&family=JetBrains+Mono:wght@400;500&family=Roboto+Mono:wght@400;500&family=Source+Code+Pro:wght@400;500&family=Space+Mono:wght@400;700&family=Ubuntu+Mono&display=swap" rel="stylesheet" />

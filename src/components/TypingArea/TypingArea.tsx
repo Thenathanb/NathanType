@@ -3,6 +3,7 @@ import { Word } from './Word';
 import { useTestStore } from '../../stores/testStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { getCharStates } from '../../utils/calculateStats';
+import { isContentFunbox } from '../../data/funbox/funbox';
 import type { CharState } from '../../types/index.js';
 
 interface TypingAreaProps {
@@ -11,8 +12,8 @@ interface TypingAreaProps {
 }
 
 export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
-  const { words, currentWordIndex, typedHistory, isActive, isComplete, mode, quoteSource } = useTestStore();
-  const { fontSize, caretStyle, smoothCaret } = useSettingsStore();
+  const { words, currentWordIndex, typedHistory, isActive, isComplete, mode, quoteSource, contentLoading } = useTestStore();
+  const { fontSize, caretStyle, smoothCaret, activeFunbox } = useSettingsStore();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -158,7 +159,7 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
             transition: smoothCaret ? 'transform 0.1s ease-out' : 'none',
             fontSize: fontSizeMap[fontSize] || '22px',
             lineHeight: '1.8',
-            fontFamily: 'var(--font-family, "Roboto Mono"), monospace',
+            fontFamily: 'var(--font-mono, var(--font-family, "Roboto Mono")), monospace',
           }}
         >
           {words.map((word, wi) => {
@@ -182,6 +183,9 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
                 isActive={wi === currentWordIndex && isActive}
                 isPast={wi < currentWordIndex}
                 wordRef={wi === currentWordIndex ? currentWordRef : undefined}
+                wordIndex={wi}
+                currentWordIndex={currentWordIndex}
+                activeFunbox={activeFunbox}
               />
             );
           })}
@@ -207,17 +211,24 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
         )}
       </div>
 
-      {/* Quote attribution */}
-      {mode === 'quote' && quoteSource && (
-        <div style={{ color: '#646669', fontSize: 13, textAlign: 'right', marginTop: 12, fontStyle: 'italic' }}>
+      {/* Attribution — shown for quote, content, meme, songs, or content funbox */}
+      {(mode === 'quote' || mode === 'content' || mode === 'meme' || mode === 'songs' || (activeFunbox && isContentFunbox(activeFunbox))) && quoteSource && (
+        <div style={{ color: 'var(--sub)', fontSize: 13, textAlign: 'right', marginTop: 12, fontStyle: 'italic' }}>
           — {quoteSource}
         </div>
       )}
 
+      {/* Loading state for async modes */}
+      {contentLoading && !isActive && (
+        <div style={{ color: 'var(--sub)', fontSize: 13, textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono, var(--font-family))' }}>
+          fetching content…
+        </div>
+      )}
+
       {/* Not-started prompt */}
-      {!isActive && !isComplete && (
-        <div style={{ color: '#646669', fontSize: 13, textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-family)' }}>
-          click here or start typing
+      {!isActive && !isComplete && !contentLoading && (
+        <div style={{ color: 'var(--sub)', fontSize: 13, textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono, var(--font-family))' }}>
+          {words.length === 0 && mode === 'songs' ? 'select a genre or connect a streaming service' : 'click here or start typing'}
         </div>
       )}
     </div>

@@ -6,6 +6,12 @@ import type { TypedWord, TestResult, WpmDataPoint } from '../types/index.js';
 import { getCharStates, calculateAllStats, calculateWpm, calculateRawWpm, calculateAccuracy } from '../utils/calculateStats';
 import { generateTestWords, generateWords } from '../utils/wordGenerator';
 import { getPbKey } from '../stores/userStore';
+import { useAuth } from '../context/AuthContext';
+import { saveTestResult } from '../utils/firestoreService';
+import { getActiveFunboxWords } from '../utils/funbox/index';
+import {
+  CONTENT_FUNBOXES, MEME_FUNBOXES, MUSIC_FUNBOXES, isContentFunbox,
+} from '../data/funbox/funbox';
 
 const ZEN_APPEND_THRESHOLD = 30; // append more words when this many left
 
@@ -31,6 +37,14 @@ export function useTypingTest() {
     addWpmDataPoint,
     clearWpmHistory,
     setQuoteSource,
+    // new-mode state
+    contentCategory,
+    memeSubmode,
+    songGenre,
+    songSection,
+    setContentLoading,
+    setMemeLabel,
+    setCurrentSong,
   } = useTestStore();
 
   const {
@@ -42,9 +56,11 @@ export function useTypingTest() {
     errorSoundEnabled,
     punctuation,
     numbers,
+    activeFunbox,
   } = useSettingsStore();
 
   const { addTestResult, updateUserStats, checkAndUpdatePersonalBest } = useUserStore();
+  const { currentUser } = useAuth();
 
   const [currentInput, setCurrentInput] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
@@ -73,9 +89,12 @@ export function useTypingTest() {
   }, [isActive, typedHistory, currentInput]);
 
   // Initialize words on mount or when config changes
+  // Content-replacing funboxes are handled in the separate effect below
   useEffect(() => {
+    if (activeFunbox && isContentFunbox(activeFunbox)) return; // handled separately
+
     if (mode === 'custom' && customText) {
-      setWords(customText.trim().split(/\s+/));
+      setWords(getActiveFunboxWords(customText.trim().split(/\s+/), activeFunbox));
       setQuoteSource(null);
       return;
     }
@@ -83,21 +102,288 @@ export function useTypingTest() {
     if (mode === 'quote') {
       import('../utils/wordGenerator').then(({ getQuote }) => {
         const { words: qWords, source } = getQuote('medium');
-        setWords(qWords);
+        setWords(getActiveFunboxWords(qWords, activeFunbox));
         setQuoteSource(source);
       });
       return;
     }
 
-    const newWords = generateTestWords(mode, {
-      wordLimit,
-      timeLimit,
-      punctuation,
-      numbers,
-    });
-    setWords(newWords);
+    const newWords = generateTestWords(mode, { wordLimit, timeLimit, punctuation, numbers });
+    setWords(getActiveFunboxWords(newWords, activeFunbox));
     setQuoteSource(null);
-  }, [mode, wordLimit, timeLimit, punctuation, numbers, customText]);
+  }, [mode, wordLimit, timeLimit, punctuation, numbers, customText, activeFunbox]);
+
+  // ── Funbox content loading (overrides base word list) ─────────
+  useEffect(() => {
+    if (!activeFunbox || !isContentFunbox(activeFunbox)) return;
+    let cancelled = false;
+    setContentLoading(true);
+
+    const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    (async () => {
+      try {
+        let words: string[] = [];
+        let source: string | null = null;
+
+        // ── Text content ────────────────────────────────────────
+        if (CONTENT_FUNBOXES.includes(activeFunbox)) {
+          if (activeFunbox === 'books') {
+            const { books } = await import('../data/content/books');
+            const e = pick(books);
+            words = e.excerpt.split(/\s+/).filter(Boolean);
+            source = `from: ${e.title} — ${e.author}`;
+          } else if (activeFunbox === 'messages') {
+            const { messages } = await import('../data/content/messages');
+            const e = pick(messages);
+            words = e.text.split(/\s+/).filter(Boolean);
+          } else if (activeFunbox === 'news') {
+            const { newsExcerpts } = await import('../data/content/news');
+            const e = pick(newsExcerpts);
+            words = e.text.split(/\s+/).filter(Boolean);
+            source = `source: ${e.source}`;
+          } else if (activeFunbox === 'history') {
+            const { historyExcerpts } = await import('../data/content/history');
+            const e = pick(historyExcerpts);
+            words = e.text.split(/\s+/).filter(Boolean);
+            source = `${e.context} — ${e.year}`;
+          } else if (activeFunbox === 'facts') {
+            const { facts } = await import('../data/content/facts');
+            const e = pick(facts);
+            words = e.text.split(/\s+/).filter(Boolean);
+            source = e.category;
+          } else if (activeFunbox === 'philosophy') {
+            const { philosophyQuotes } = await import('../data/content/philosophy');
+            const e = pick(philosophyQuotes);
+            words = e.text.split(/\s+/).filter(Boolean);
+            source = `— ${e.philosopher}`;
+          } else if (activeFunbox === 'movie-quotes') {
+            const { movieQuotes } = await import('../data/content/moviequotes');
+            const e = pick(movieQuotes);
+            words = e.text.split(/\s+/).filter(Boolean);
+            source = `${e.film} (${e.year})`;
+          } else if (activeFunbox === 'wikipedia') {
+            // Try live Wikipedia API first, fall back to local
+            try {
+              const res = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary');
+              if (!res.ok) throw new Error('fetch failed');
+              const data = await res.json();
+              const excerpt = (data.extract || '').slice(0, 300).trim();
+              if (excerpt.length > 20) {
+                words = excerpt.split(/\s+/).filter(Boolean);
+                source = `wikipedia: ${data.title}`;
+              } else throw new Error('too short');
+            } catch {
+              const { wikiExcerpts } = await import('../data/content/wikipedia');
+              const e = pick(wikiExcerpts);
+              words = e.text.split(/\s+/).filter(Boolean);
+              source = `wikipedia: ${e.title}`;
+            }
+          }
+        }
+
+        // ── Meme content ────────────────────────────────────────
+        if (MEME_FUNBOXES.includes(activeFunbox)) {
+          let entry: { text: string; label: string } | null = null;
+          if (activeFunbox === 'brainrot') {
+            const { brainrot } = await import('../data/memes/brainrot');
+            entry = pick(brainrot);
+          } else if (activeFunbox === 'classic-memes') {
+            const { classics } = await import('../data/memes/classics');
+            entry = pick(classics);
+          } else if (activeFunbox === 'gen-z') {
+            const { genz } = await import('../data/memes/genz');
+            entry = pick(genz);
+          } else if (activeFunbox === 'italian-brainrot') {
+            const { italian } = await import('../data/memes/italian');
+            entry = pick(italian);
+          } else if (activeFunbox === 'characters') {
+            const { characters } = await import('../data/memes/characters');
+            entry = pick(characters);
+          }
+          if (entry) {
+            words = entry.text.split(/\s+/).filter(Boolean);
+            source = entry.label;
+          }
+        }
+
+        // ── Lyrics content ──────────────────────────────────────
+        if (MUSIC_FUNBOXES.includes(activeFunbox)) {
+          type SongEntry = { id: string; title: string; artist: string; genre: string; sections: { verse1: string; chorus: string; verse2?: string; full: string } };
+          let songs: SongEntry[] = [];
+          if (activeFunbox === 'hiphop-lyrics') songs = (await import('../data/lyrics/hiphop')).hiphopSongs;
+          else if (activeFunbox === 'pop-lyrics') songs = (await import('../data/lyrics/pop')).popSongs;
+          else if (activeFunbox === 'rnb-lyrics') songs = (await import('../data/lyrics/rnb')).rnbSongs;
+          else if (activeFunbox === 'afrobeats-lyrics') songs = (await import('../data/lyrics/afrobeats')).afrobeatsSongs;
+
+          if (songs.length > 0) {
+            const song = pick(songs);
+            const text = song.sections.verse1 || song.sections.full;
+            words = text.split(/\s+/).filter(Boolean);
+            source = `${song.title} — ${song.artist}`;
+          }
+        }
+
+        if (!cancelled && words.length > 0) {
+          setWords(words);
+          setQuoteSource(source);
+          setContentLoading(false);
+        } else if (!cancelled) {
+          setContentLoading(false);
+        }
+      } catch (err) {
+        console.error('Funbox content load failed:', err);
+        if (!cancelled) setContentLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [activeFunbox]);
+
+  // ── Content mode loading ─────────────────────────────────────
+  useEffect(() => {
+    if (mode !== 'content') return;
+    let cancelled = false;
+    setContentLoading(true);
+
+    const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    (async () => {
+      try {
+        let words: string[] = [];
+        let source: string | null = null;
+
+        if (contentCategory === 'books') {
+          const { books } = await import('../data/content/books');
+          const e = pick(books);
+          words = e.excerpt.split(/\s+/).filter(Boolean);
+          source = `from: ${e.title} — ${e.author}`;
+        } else if (contentCategory === 'messages') {
+          const { messages } = await import('../data/content/messages');
+          const e = pick(messages);
+          words = e.text.split(/\s+/).filter(Boolean);
+          source = null;
+        } else if (contentCategory === 'news') {
+          const { newsExcerpts } = await import('../data/content/news');
+          const e = pick(newsExcerpts);
+          words = e.text.split(/\s+/).filter(Boolean);
+          source = `source: ${e.source}`;
+        } else if (contentCategory === 'history') {
+          const { historyExcerpts } = await import('../data/content/history');
+          const e = pick(historyExcerpts);
+          words = e.text.split(/\s+/).filter(Boolean);
+          source = `${e.context} — ${e.year}`;
+        } else if (contentCategory === 'facts') {
+          const { facts } = await import('../data/content/facts');
+          const e = pick(facts);
+          words = e.text.split(/\s+/).filter(Boolean);
+          source = e.category;
+        }
+
+        if (!cancelled) {
+          setWords(words);
+          setQuoteSource(source);
+          setContentLoading(false);
+        }
+      } catch (err) {
+        console.error('Failed to load content:', err);
+        if (!cancelled) setContentLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [mode, contentCategory]);
+
+  // ── Meme mode loading ────────────────────────────────────────
+  useEffect(() => {
+    if (mode !== 'meme') return;
+    let cancelled = false;
+    setContentLoading(true);
+
+    const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    (async () => {
+      try {
+        let entry: { text: string; label: string } | null = null;
+
+        if (memeSubmode === 'brainrot') {
+          const { brainrot } = await import('../data/memes/brainrot');
+          entry = pick(brainrot);
+        } else if (memeSubmode === 'classics') {
+          const { classics } = await import('../data/memes/classics');
+          entry = pick(classics);
+        } else if (memeSubmode === 'genz') {
+          const { genz } = await import('../data/memes/genz');
+          entry = pick(genz);
+        } else if (memeSubmode === 'italian') {
+          const { italian } = await import('../data/memes/italian');
+          entry = pick(italian);
+        } else if (memeSubmode === 'characters') {
+          const { characters } = await import('../data/memes/characters');
+          entry = pick(characters);
+        }
+
+        if (!cancelled && entry) {
+          setWords(entry.text.split(/\s+/).filter(Boolean));
+          setQuoteSource(entry.label);
+          setMemeLabel(entry.label);
+          setContentLoading(false);
+        }
+      } catch (err) {
+        console.error('Failed to load meme:', err);
+        if (!cancelled) setContentLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [mode, memeSubmode]);
+
+  // ── Songs mode loading (library) ─────────────────────────────
+  useEffect(() => {
+    if (mode !== 'songs') return;
+    let cancelled = false;
+    setContentLoading(true);
+
+    const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    (async () => {
+      try {
+        type SongEntry = { id: string; title: string; artist: string; genre: string; sections: { verse1: string; chorus: string; verse2?: string; full: string } };
+        let songs: SongEntry[] = [];
+
+        if (songGenre === 'hiphop') {
+          songs = (await import('../data/lyrics/hiphop')).hiphopSongs;
+        } else if (songGenre === 'pop') {
+          songs = (await import('../data/lyrics/pop')).popSongs;
+        } else if (songGenre === 'rnb') {
+          songs = (await import('../data/lyrics/rnb')).rnbSongs;
+        } else if (songGenre === 'afrobeats') {
+          songs = (await import('../data/lyrics/afrobeats')).afrobeatsSongs;
+        } else if (songGenre === 'rock') {
+          songs = (await import('../data/lyrics/rock')).rockSongs;
+        }
+
+        if (cancelled || songs.length === 0) { setContentLoading(false); return; }
+
+        const song = pick(songs);
+        const sectionText =
+          songSection === 'verse1' ? song.sections.verse1 :
+          songSection === 'chorus' ? song.sections.chorus :
+          songSection === 'verse2' ? (song.sections.verse2 ?? song.sections.full) :
+          song.sections.full;
+
+        setWords(sectionText.split(/\s+/).filter(Boolean));
+        setCurrentSong({ title: song.title, artist: song.artist, genre: songGenre, section: songSection, source: 'library' });
+        setQuoteSource(`${song.title} — ${song.artist}`);
+        setContentLoading(false);
+      } catch (err) {
+        console.error('Failed to load song:', err);
+        if (!cancelled) setContentLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [mode, songGenre, songSection]);
 
   // Zen mode: append more words when running low
   useEffect(() => {
@@ -109,10 +395,38 @@ export function useTypingTest() {
   }, [mode, isActive, currentWordIndex, words.length, punctuation, numbers]);
 
   // Keep a stable ref to mode/settings for use inside intervals
-  const settingsRef = useRef({ mode, timeLimit, wordLimit, punctuation, numbers, difficulty });
+  const settingsRef = useRef({ mode, timeLimit, wordLimit, punctuation, numbers, difficulty, activeFunbox });
   useEffect(() => {
-    settingsRef.current = { mode, timeLimit, wordLimit, punctuation, numbers, difficulty };
+    settingsRef.current = { mode, timeLimit, wordLimit, punctuation, numbers, difficulty, activeFunbox };
   });
+
+  // ── Earthquake funbox: shuffle upcoming words every 3-5s ──────
+  const earthquakeRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  useEffect(() => {
+    if (activeFunbox !== 'earthquake' || !isActive || isComplete) {
+      if (earthquakeRef.current) clearInterval(earthquakeRef.current);
+      return;
+    }
+    const scheduleNext = () => {
+      const delay = 3000 + Math.random() * 2000;
+      earthquakeRef.current = setTimeout(() => {
+        const { words: currentWords, currentWordIndex: cwi } = useTestStore.getState();
+        if (cwi < currentWords.length - 2) {
+          const upcoming = [...currentWords.slice(cwi + 1)];
+          // Fisher-Yates shuffle of 3 random positions
+          for (let i = 0; i < 3; i++) {
+            const a = Math.floor(Math.random() * upcoming.length);
+            const b = Math.floor(Math.random() * upcoming.length);
+            [upcoming[a], upcoming[b]] = [upcoming[b], upcoming[a]];
+          }
+          useTestStore.getState().setWords([...currentWords.slice(0, cwi + 1), ...upcoming]);
+        }
+        scheduleNext();
+      }, delay) as unknown as ReturnType<typeof setInterval>;
+    };
+    scheduleNext();
+    return () => { if (earthquakeRef.current) clearTimeout(earthquakeRef.current as unknown as ReturnType<typeof setTimeout>); };
+  }, [activeFunbox, isActive, isComplete]);
 
   const handleTestComplete = useCallback(() => {
     // Use getState() to read fresh store values — avoids stale closure from interval capture
@@ -153,7 +467,33 @@ export function useTypingTest() {
     state.setCurrentResult(result, isNewPb);
     addTestResult(result);
     updateUserStats(stats.wpm, stats.accuracy, stats.timeElapsed);
-  }, [checkAndUpdatePersonalBest, addTestResult, updateUserStats]);
+
+    // Save to Firestore and compute XP if user is signed in
+    if (currentUser) {
+      const modeOption = s.mode === 'time' ? s.timeLimit : s.wordLimit;
+      saveTestResult(
+        currentUser.uid,
+        {
+          wpm: stats.wpm,
+          rawWpm: stats.rawWpm,
+          accuracy: stats.accuracy,
+          consistency: stats.consistency,
+          mode: s.mode,
+          modeOption,
+          language: 'english',
+          chars: {
+            correct: stats.correctChars,
+            incorrect: stats.incorrectChars,
+            extra: stats.extraChars,
+            missed: stats.missedChars,
+          },
+        },
+        stats.timeElapsed
+      )
+        .then((xpResult) => { useTestStore.getState().setXpResult(xpResult); })
+        .catch((err) => { console.error('Firestore save failed:', err); });
+    }
+  }, [checkAndUpdatePersonalBest, addTestResult, updateUserStats, currentUser]);
 
   // Keep a stable ref so intervals always call the latest version
   const handleTestCompleteRef = useRef(handleTestComplete);
@@ -318,21 +658,24 @@ export function useTypingTest() {
     setCurrentInput('');
     setTimeRemaining(timeLimit);
 
+    // Content funboxes re-trigger via their own useEffect when resetTest fires
+    if (activeFunbox && isContentFunbox(activeFunbox)) return;
+
     if (mode === 'quote') {
       import('../utils/wordGenerator').then(({ getQuote }) => {
         const { words: qWords, source } = getQuote('medium');
-        setWords(qWords);
+        setWords(getActiveFunboxWords(qWords, activeFunbox));
         setQuoteSource(source);
       });
       return;
     }
     if (mode === 'custom' && customText) {
-      setWords(customText.trim().split(/\s+/));
+      setWords(getActiveFunboxWords(customText.trim().split(/\s+/), activeFunbox));
       return;
     }
     const newWords = generateTestWords(mode, { wordLimit, timeLimit, punctuation, numbers });
-    setWords(newWords);
-  }, [mode, wordLimit, timeLimit, punctuation, numbers, customText]);
+    setWords(getActiveFunboxWords(newWords, activeFunbox));
+  }, [mode, wordLimit, timeLimit, punctuation, numbers, customText, activeFunbox]);
 
   const handleCancel = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);

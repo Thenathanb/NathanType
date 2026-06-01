@@ -1,5 +1,20 @@
 // Test Modes
-export type TestMode = 'time' | 'words' | 'quote' | 'zen' | 'custom' | 'code';
+export type TestMode = 'time' | 'words' | 'quote' | 'zen' | 'custom' | 'code' | 'content' | 'meme' | 'songs';
+
+// Content mode
+export type ContentCategory = 'books' | 'messages' | 'news' | 'history' | 'facts';
+export type MemeSubmode    = 'brainrot' | 'classics' | 'genz' | 'italian' | 'characters';
+export type SongGenre      = 'hiphop' | 'pop' | 'rnb' | 'afrobeats' | 'rock';
+export type SongSection    = 'verse1' | 'chorus' | 'verse2' | 'full';
+
+export interface SongData {
+  title: string;
+  artist: string;
+  genre: string;
+  section: SongSection;
+  source: 'library' | 'spotify' | 'applemusic' | 'soundcloud';
+  albumArt?: string;
+}
 
 // Character State
 export type CharState = 'correct' | 'incorrect' | 'extra' | 'missed' | 'pending';
@@ -142,6 +157,15 @@ export interface UserProfile {
     averageWpm: number;
     averageAccuracy: number;
   };
+}
+
+// XP result returned after a test is saved to Firestore
+export interface XpResult {
+  xpGained: number
+  didLevelUp: boolean
+  newLevel: number
+  newXp: number
+  newXpToNextLevel: number
 }
 
 // Leaderboard Entry

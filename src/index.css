@@ -2,16 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Allow --main to be animated (used by rgb theme) */
+@property --main {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #e2b714;
+}
+
 :root {
-  /* Default theme (Serika Dark) */
-  --bg-primary: #2c2e31;
-  --bg-secondary: #323437;
-  --text-primary: #d1d0ce;
-  --text-secondary: #646669;
-  --accent: #e2b714;
+  /* Default theme (nathan dark) */
+  --bg:   #2c2e31;
+  --bg2:  #323437;
+  --main: #e2b714;
+  --text: #d1d0ce;
+  --sub:  #646669;
   --error: #ca4754;
-  --correct: #d1d0ce;
-  --caret-color: #e2b714;
+
+  /* Legacy aliases so Tailwind classes & old inline-style components keep working */
+  --bg-primary:    #2c2e31;
+  --bg-secondary:  #323437;
+  --text-primary:  #d1d0ce;
+  --text-secondary:#646669;
+  --accent:        #e2b714;
+  --correct:       #d1d0ce;
+  --caret-color:   #e2b714;
+
+  /* Typography */
+  --font-mono: 'Roboto Mono', monospace;
+  --font-family: 'Roboto Mono', monospace;
+  --font-ligatures: none;
+}
+
+/* RGB theme: animates --main through the spectrum */
+@keyframes rgb-cycle {
+  0%   { --main: hsl(0,   100%, 60%); }
+  33%  { --main: hsl(120, 100%, 60%); }
+  66%  { --main: hsl(240, 100%, 60%); }
+  100% { --main: hsl(0,   100%, 60%); }
+}
+:root.theme-rgb {
+  animation: rgb-cycle 3s linear infinite;
 }
 
 html, body, #root {
@@ -83,6 +113,25 @@ body {
   width: 0;
   height: 0;
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes dropdownAppear {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Page content scrollable while header/footer stay fixed */
+.page-scroll {
+  overflow-y: auto;
+  height: 100%;
+}
+.page-scroll::-webkit-scrollbar { width: 6px; }
+.page-scroll::-webkit-scrollbar-track { background: transparent; }
+.page-scroll::-webkit-scrollbar-thumb { background: #646669; border-radius: 3px; }
 
 @keyframes caret-blink {
   0%, 100% { opacity: 1; }

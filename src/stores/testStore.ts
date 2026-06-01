@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { TestState, TestMode, TypedWord, TestConfig, TestResult, WpmDataPoint } from '../types/index.js';
+import type { TestState, TestMode, TypedWord, TestConfig, TestResult, WpmDataPoint, XpResult, ContentCategory, MemeSubmode, SongGenre, SongSection, SongData } from '../types/index.js';
 
 interface TestStore extends TestState {
   quoteSource: string | null;
@@ -28,6 +28,26 @@ interface TestStore extends TestState {
   wpmHistory: WpmDataPoint[];
   addWpmDataPoint: (point: WpmDataPoint) => void;
   clearWpmHistory: () => void;
+  xpResult: XpResult | null;
+  setXpResult: (result: XpResult | null) => void;
+
+  // Per-mode secondary state
+  contentCategory: ContentCategory;
+  setContentCategory: (cat: ContentCategory) => void;
+  memeSubmode: MemeSubmode;
+  setMemeSubmode: (sub: MemeSubmode) => void;
+  memeLabel: string | null;
+  setMemeLabel: (label: string | null) => void;
+  songGenre: SongGenre;
+  setSongGenre: (genre: SongGenre) => void;
+  songSection: SongSection;
+  setSongSection: (section: SongSection) => void;
+  currentSong: SongData | null;
+  setCurrentSong: (song: SongData | null) => void;
+  contentLoading: boolean;
+  setContentLoading: (loading: boolean) => void;
+  restartSignal: number;
+  triggerRestart: () => void;
 }
 
 const defaultConfig: TestConfig = {
@@ -64,6 +84,15 @@ export const useTestStore = create<TestStore>()(
   currentResult: null,
   isNewPersonalBest: false,
   wpmHistory: [],
+  xpResult: null,
+  contentCategory: 'books',
+  memeSubmode: 'brainrot',
+  memeLabel: null,
+  songGenre: 'hiphop',
+  songSection: 'verse1',
+  currentSong: null,
+  contentLoading: false,
+  restartSignal: 0,
 
   setMode: (mode) => set({ mode }),
   setTimeLimit: (timeLimit) => set({ timeLimit }),
@@ -101,8 +130,16 @@ export const useTestStore = create<TestStore>()(
     wpmHistory: [],
     currentResult: null,
     isNewPersonalBest: false,
+    xpResult: null,
+    memeLabel: null,
     quoteSource: state.quoteSource,
     customText: state.customText,
+    contentCategory: state.contentCategory,
+    memeSubmode: state.memeSubmode,
+    songGenre: state.songGenre,
+    songSection: state.songSection,
+    currentSong: null,
+    contentLoading: false,
   })),
 
   resetTest: () => set((state) => ({
@@ -114,8 +151,16 @@ export const useTestStore = create<TestStore>()(
     wpmHistory: [],
     currentResult: null,
     isNewPersonalBest: false,
+    xpResult: null,
+    memeLabel: null,
     quoteSource: null,
     customText: state.customText,
+    contentCategory: state.contentCategory,
+    memeSubmode: state.memeSubmode,
+    songGenre: state.songGenre,
+    songSection: state.songSection,
+    currentSong: null,
+    contentLoading: false,
   })),
 
   setConfig: (config) => set((state) => ({
@@ -126,6 +171,15 @@ export const useTestStore = create<TestStore>()(
   setCustomText: (text) => set({ customText: text }),
 
   setCurrentResult: (result, isNewPb = false) => set({ currentResult: result, isNewPersonalBest: isNewPb }),
+  setXpResult: (result) => set({ xpResult: result }),
+  setContentCategory: (contentCategory) => set({ contentCategory }),
+  setMemeSubmode: (memeSubmode) => set({ memeSubmode }),
+  setMemeLabel: (memeLabel) => set({ memeLabel }),
+  setSongGenre: (songGenre) => set({ songGenre }),
+  setSongSection: (songSection) => set({ songSection }),
+  setCurrentSong: (currentSong) => set({ currentSong }),
+  setContentLoading: (contentLoading) => set({ contentLoading }),
+  triggerRestart: () => set((state) => ({ restartSignal: state.restartSignal + 1 })),
 
   addWpmDataPoint: (point) => set((state) => ({
     wpmHistory: [...state.wpmHistory, point],
@@ -135,11 +189,15 @@ export const useTestStore = create<TestStore>()(
     }),
     {
       name: 'nathantype-test-config',
-      // Only persist the user's mode/limit choices — never persist active test state
+      // Persist mode choices and sub-mode selections — never persist active test state
       partialize: (state) => ({
         mode: state.mode,
         timeLimit: state.timeLimit,
         wordLimit: state.wordLimit,
+        contentCategory: state.contentCategory,
+        memeSubmode: state.memeSubmode,
+        songGenre: state.songGenre,
+        songSection: state.songSection,
       }),
     }
   )

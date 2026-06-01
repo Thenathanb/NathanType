@@ -1,5 +1,7 @@
 import { useSettingsStore } from '../../stores/settingsStore';
-import { getAllThemes, FONTS } from '../../utils/themes';
+import { ThemeSelector } from './ThemeSelector';
+import { FontSelector } from './FontSelector';
+import { FunboxGrid } from '../Funbox/FunboxGrid';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -8,7 +10,6 @@ interface SettingsProps {
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
   const settings = useSettingsStore();
-  const themes = getAllThemes();
 
   if (!isOpen) return null;
 
@@ -19,16 +20,16 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
     >
       <div
         className="rounded-xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl"
-        style={{ backgroundColor: '#2c2e31', border: '1px solid #323437' }}
+        style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--bg2)' }}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="font-mono font-bold" style={{ color: '#e2b714', fontSize: 18 }}>settings</h2>
+          <h2 className="font-mono font-bold" style={{ color: 'var(--main)', fontSize: 18 }}>settings</h2>
           <button
             onClick={onClose}
             className="leading-none transition-colors"
-            style={{ color: '#646669', fontSize: 24 }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#d1d0ce')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#646669')}
+            style={{ color: 'var(--sub)', fontSize: 24, background: 'none', border: 'none', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--sub)')}
           >
             ×
           </button>
@@ -37,65 +38,17 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
         <div className="space-y-8">
           {/* Theme */}
           <Section title="Theme">
-            <div className="grid grid-cols-3 gap-2">
-              {themes.map((theme) => (
-                <button
-                  key={theme.id}
-                  onClick={() => settings.updateSettings({ theme: theme.id })}
-                  className="p-3 rounded-lg transition-all"
-                  style={{
-                    backgroundColor: theme.bgSecondary,
-                    border: settings.theme === theme.id
-                      ? '2px solid #e2b714'
-                      : '2px solid transparent',
-                  }}
-                  onMouseEnter={e => {
-                    if (settings.theme !== theme.id)
-                      (e.currentTarget as HTMLElement).style.borderColor = '#646669';
-                  }}
-                  onMouseLeave={e => {
-                    if (settings.theme !== theme.id)
-                      (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-                  }}
-                >
-                  <div className="text-xs font-medium mb-1.5 font-mono" style={{ color: theme.textPrimary }}>
-                    {theme.name}
-                  </div>
-                  <div className="flex gap-1">
-                    <Swatch color={theme.accent} />
-                    <Swatch color={theme.error} />
-                    <Swatch color={theme.textSecondary} />
-                  </div>
-                </button>
-              ))}
-            </div>
+            <ThemeSelector />
           </Section>
 
           {/* Font */}
           <Section title="Font">
-            <div className="grid grid-cols-2 gap-2">
-              {FONTS.map((font) => (
-                <button
-                  key={font.id}
-                  onClick={() => settings.updateSettings({ fontFamily: font.id })}
-                  className="p-3 rounded-lg text-left transition-all"
-                  style={{
-                    backgroundColor: '#323437',
-                    border: settings.fontFamily === font.id
-                      ? '2px solid #e2b714'
-                      : '2px solid transparent',
-                  }}
-                >
-                  <div
-                    className="text-base mb-0.5"
-                    style={{ fontFamily: `'${font.id}', monospace`, color: '#d1d0ce' }}
-                  >
-                    The quick fox
-                  </div>
-                  <div className="text-xs font-mono" style={{ color: '#646669' }}>{font.label}</div>
-                </button>
-              ))}
-            </div>
+            <FontSelector />
+          </Section>
+
+          {/* Funbox */}
+          <Section title="🎮 funbox">
+            <FunboxGrid />
           </Section>
 
           {/* Appearance */}
@@ -166,7 +119,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                 onChange={(v) => settings.updateSettings({ difficulty: v })}
               />
             </OptionRow>
-            <div className="font-mono mt-1 mb-3" style={{ color: '#646669', fontSize: 12 }}>
+            <div className="font-mono mt-1 mb-3" style={{ color: 'var(--sub)', fontSize: 12 }}>
               {settings.difficulty === 'normal' && 'Standard experience — backspace allowed'}
               {settings.difficulty === 'expert' && 'Restart on any incorrect word submission'}
               {settings.difficulty === 'master' && 'Restart on any incorrect keystroke'}
@@ -215,13 +168,13 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
           </Section>
 
           {/* Reset */}
-          <div className="pt-4" style={{ borderTop: '1px solid #323437' }}>
+          <div className="pt-4" style={{ borderTop: '1px solid var(--bg2)' }}>
             <button
               onClick={() => {
                 if (confirm('Reset all settings to defaults?')) settings.resetSettings();
               }}
               className="w-full py-2 font-mono transition-opacity hover:opacity-80 rounded-lg"
-              style={{ color: '#ca4754', fontSize: 13 }}
+              style={{ color: 'var(--error)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}
             >
               reset to defaults
             </button>
@@ -235,7 +188,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="font-mono uppercase tracking-widest mb-3" style={{ color: '#646669', fontSize: 11 }}>{title}</h3>
+      <h3 className="font-mono uppercase tracking-widest mb-3" style={{ color: 'var(--sub)', fontSize: 11 }}>{title}</h3>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -244,7 +197,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function OptionRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="font-mono text-sm shrink-0" style={{ color: '#d1d0ce' }}>{label}</span>
+      <span className="font-mono text-sm shrink-0" style={{ color: 'var(--text)' }}>{label}</span>
       {children}
     </div>
   );
@@ -266,15 +219,17 @@ function ButtonGroup<T extends string>({
           className="px-3 py-1 rounded-md font-mono transition-all"
           style={{
             fontSize: 12,
-            backgroundColor: value === opt ? '#e2b714' : '#323437',
-            color: value === opt ? '#2c2e31' : '#646669',
+            backgroundColor: value === opt ? 'var(--main)' : 'var(--bg2)',
+            color: value === opt ? 'var(--bg)' : 'var(--sub)',
             fontWeight: value === opt ? 600 : 400,
+            border: 'none',
+            cursor: 'pointer',
           }}
           onMouseEnter={e => {
-            if (value !== opt) (e.currentTarget as HTMLElement).style.color = '#d1d0ce';
+            if (value !== opt) (e.currentTarget as HTMLElement).style.color = 'var(--text)';
           }}
           onMouseLeave={e => {
-            if (value !== opt) (e.currentTarget as HTMLElement).style.color = '#646669';
+            if (value !== opt) (e.currentTarget as HTMLElement).style.color = 'var(--sub)';
           }}
         >
           {opt}
@@ -295,14 +250,11 @@ function Toggle({
   return (
     <label className="flex items-center justify-between gap-4 cursor-pointer group">
       <div>
-        <span
-          className="font-mono text-sm transition-colors"
-          style={{ color: '#d1d0ce' }}
-        >
+        <span className="font-mono text-sm transition-colors" style={{ color: 'var(--text)' }}>
           {label}
         </span>
         {description && (
-          <p className="font-mono mt-0.5" style={{ color: '#646669', fontSize: 11 }}>{description}</p>
+          <p className="font-mono mt-0.5" style={{ color: 'var(--sub)', fontSize: 11 }}>{description}</p>
         )}
       </div>
       <button
@@ -310,20 +262,16 @@ function Toggle({
         aria-checked={value}
         onClick={() => onChange(!value)}
         className="relative w-10 h-5 rounded-full transition-colors shrink-0"
-        style={{ backgroundColor: value ? '#e2b714' : '#323437' }}
+        style={{ backgroundColor: value ? 'var(--main)' : 'var(--bg2)', border: 'none', cursor: 'pointer' }}
       >
         <span
           className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
           style={{
-            backgroundColor: '#2c2e31',
+            backgroundColor: 'var(--bg)',
             transform: value ? 'translateX(20px)' : 'translateX(0)',
           }}
         />
       </button>
     </label>
   );
-}
-
-function Swatch({ color }: { color: string }) {
-  return <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: color }} />;
 }

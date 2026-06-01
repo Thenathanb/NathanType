@@ -22,11 +22,14 @@ export function ModeSelector() {
   const wordLimits = [10, 25, 50, 100];
 
   const modes: { value: TestMode; label: string; icon: React.ReactNode }[] = [
-    { value: 'time',   label: 'time',   icon: <IconClock /> },
-    { value: 'words',  label: 'words',  icon: <IconText /> },
-    { value: 'quote',  label: 'quote',  icon: <IconQuote /> },
-    { value: 'zen',    label: 'zen',    icon: <IconLeaf /> },
-    { value: 'custom', label: 'custom', icon: <IconPencil /> },
+    { value: 'time',    label: 'time',    icon: <IconClock /> },
+    { value: 'words',   label: 'words',   icon: <IconText /> },
+    { value: 'quote',   label: 'quote',   icon: <IconQuote /> },
+    { value: 'zen',     label: 'zen',     icon: <IconLeaf /> },
+    { value: 'custom',  label: 'custom',  icon: <IconPencil /> },
+    { value: 'content', label: 'content', icon: <IconBook /> },
+    { value: 'meme',    label: 'meme',    icon: <IconFire /> },
+    { value: 'songs',   label: 'songs',   icon: <IconMusic /> },
   ];
 
   const handleModeClick = (m: TestMode) => {
@@ -167,6 +170,30 @@ function IconPencil() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    </svg>
+  );
+}
+function IconBook() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+function IconFire() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+    </svg>
+  );
+}
+function IconMusic() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
     </svg>
   );
 }

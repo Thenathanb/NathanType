@@ -3,13 +3,17 @@ import { persist } from 'zustand/middleware';
 import type { Settings } from '../types/index.js';
 
 interface SettingsStore extends Settings {
-  updateSettings: (settings: Partial<Settings>) => void;
+  fontId: string;
+  activeFunbox: string | null;
+  setActiveFunbox: (id: string | null) => void;
+  updateSettings: (settings: Partial<Settings & { fontId: string }>) => void;
   resetSettings: () => void;
 }
 
-const defaultSettings: Settings = {
+const defaultSettings: Settings & { fontId: string; activeFunbox: string | null } = {
   // Visual
   theme: 'serika-dark',
+  fontId: 'roboto-mono',
   fontSize: 'medium',
   fontFamily: 'Roboto Mono',
   caretStyle: 'line',
@@ -39,12 +43,19 @@ const defaultSettings: Settings = {
 
   // Difficulty
   difficulty: 'normal',
+
+  // Funbox
+  activeFunbox: null,
 };
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
       ...defaultSettings,
+      setActiveFunbox: (id) => {
+        set({ activeFunbox: id });
+        try { if (id) localStorage.setItem('nt-funbox', id); else localStorage.removeItem('nt-funbox'); } catch (_) {}
+      },
       updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
       resetSettings: () => set(defaultSettings),
     }),

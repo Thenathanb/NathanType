@@ -1,0 +1,146 @@
+import { useEffect, useMemo, useState } from 'react';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { useAuth } from '../../context/AuthContext';
+
+type Range = '12m' | '6m' | '30d';
+
+const COLORS = [
+  'rgba(255,255,255,0.05)',
+  'rgba(226,183,20,0.2)',
+  'rgba(226,183,20,0.45)',
+  'rgba(226,183,20,0.7)',
+  '#e2b714',
+];
+
+function colorFor(count: number) {
+  if (count === 0) return COLORS[0];
+  if (count <= 2)  return COLORS[1];
+  if (count <= 5)  return COLORS[2];
+  if (count <= 9)  return COLORS[3];
+  return COLORS[4];
+}
+
+function toDateKey(ts: number) {
+  return new Date(ts).toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+export function ActivityHeatmap() {
+  const { currentUser } = useAuth();
+  const [range, setRange] = useState<Range>('12m');
+  const [dayCounts, setDayCounts] = useState<Record<string, number>>({});
+  const [total, setTotal] = useState(0);
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const days = range === '12m' ? 365 : range === '6m' ? 182 : 30;
+    const cutoff = Date.now() - days * 86_400_000;
+    getDocs(query(
+      collection(db, 'testResults', currentUser.uid, 'results'),
+      where('timestamp', '>=', cutoff),
+      orderBy('timestamp', 'asc'),
+    )).then(snap => {
+      const counts: Record<string, number> = {};
+      snap.forEach(d => {
+        const key = toDateKey((d.data() as { timestamp: number }).timestamp);
+        counts[key] = (counts[key] ?? 0) + 1;
+      });
+      setDayCounts(counts);
+      setTotal(snap.size);
+    }).catch(console.error);
+  }, [currentUser, range]);
+
+  // Build grid: weeks × days (Sun=0 … Sat=6)
+  const cells = useMemo(() => {
+    const days = range === '12m' ? 365 : range === '6m' ? 182 : 30;
+    const end = new Date(); end.setHours(23, 59, 59, 999);
+    const start = new Date(end.getTime() - days * 86_400_000);
+    // Align start to the beginning of its week (Sunday)
+    const startDay = new Date(start); startDay.setDate(start.getDate() - start.getDay());
+    const rows: { date: string; count: number }[][] = Array.from({ length: 7 }, () => []);
+    const cursor = new Date(startDay);
+    while (cursor <= end) {
+      const iso = cursor.toISOString().slice(0, 10);
+      rows[cursor.getDay()].push({ date: iso, count: dayCounts[iso] ?? 0 });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return rows;
+  }, [dayCounts, range]);
+
+  const DAY_LABELS = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+
+  return (
+    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: '#323437', position: 'relative' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <select
+            value={range} onChange={e => setRange(e.target.value as Range)}
+            className="font-mono outline-none rounded px-2 py-1"
+            style={{ backgroundColor: '#2c2e31', color: '#d1d0ce', border: '1px solid #3a3c3f', fontSize: 12, cursor: 'pointer' }}
+          >
+            <option value="12m">last 12 months</option>
+            <option value="6m">last 6 months</option>
+            <option value="30d">last 30 days</option>
+          </select>
+          <span style={{ color: '#646669', fontSize: 13 }}>{total} tests</span>
+        </div>
+        {/* Legend */}
+        <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: '#646669' }}>
+          <span>less</span>
+          {COLORS.map((c, i) => (
+            <div key={i} style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: c }} />
+          ))}
+          <span>more</span>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div className="flex gap-1.5 overflow-x-auto">
+        {/* Day labels */}
+        <div className="flex flex-col gap-0.5 shrink-0" style={{ paddingTop: 0 }}>
+          {DAY_LABELS.map((l, i) => (
+            <div key={i} style={{ height: 12, lineHeight: '12px', fontSize: 10, color: '#646669', width: 28 }}>{l}</div>
+          ))}
+        </div>
+        {/* Weeks */}
+        {cells[0].map((_, wi) => (
+          <div key={wi} className="flex flex-col gap-0.5">
+            {cells.map((row, di) => {
+              const cell = row[wi];
+              if (!cell) return <div key={di} style={{ width: 12, height: 12 }} />;
+              const date = new Date(cell.date + 'T12:00:00');
+              const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+              return (
+                <div
+                  key={di}
+                  style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: colorFor(cell.count), cursor: 'default' }}
+                  onMouseEnter={e => {
+                    const rect = (e.target as HTMLElement).getBoundingClientRect();
+                    setTooltip({ text: `${cell.count} test${cell.count !== 1 ? 's' : ''} on ${label}`, x: rect.left, y: rect.top });
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ color: '#646669', fontSize: 11, marginTop: 10 }}>
+        Note: All activity data is using UTC time.
+      </div>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div
+          className="fixed font-mono rounded px-2 py-1 pointer-events-none"
+          style={{ left: tooltip.x, top: tooltip.y - 28, backgroundColor: '#2c2e31', color: '#d1d0ce', fontSize: 12, zIndex: 9999, border: '0.5px solid rgba(255,255,255,0.1)' }}
+        >
+          {tooltip.text}
+        </div>
+      )}
+    </div>
+  );
+}

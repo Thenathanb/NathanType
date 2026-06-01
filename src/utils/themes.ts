@@ -1,39 +1,38 @@
+import { allThemes, getTheme } from '../data/themes/themes';
+import { applyTheme as applyNTTheme } from './applyTheme';
+import { applyFont as applyNTFont } from './applyFont';
 import type { Theme } from '../types/index.js';
-import themesData from '../data/themes/themes.json';
 
-export const themes: Theme[] = themesData as Theme[];
+// ── Theme application ─────────────────────────────────────────────
 
-/**
- * Apply theme to document root
- */
 export function applyTheme(themeId: string) {
-  const theme = themes.find((t) => t.id === themeId);
-  if (!theme) return;
-
-  const root = document.documentElement;
-  root.style.setProperty('--bg-primary', theme.bgPrimary);
-  root.style.setProperty('--bg-secondary', theme.bgSecondary);
-  root.style.setProperty('--text-primary', theme.textPrimary);
-  root.style.setProperty('--text-secondary', theme.textSecondary);
-  root.style.setProperty('--accent', theme.accent);
-  root.style.setProperty('--error', theme.error);
-  root.style.setProperty('--correct', theme.correct);
-  root.style.setProperty('--caret-color', theme.caretColor);
+  const theme = getTheme(themeId);
+  if (theme) {
+    applyNTTheme(theme);
+  }
 }
 
-/**
- * Get theme by ID
- */
-export function getThemeById(themeId: string): Theme | undefined {
-  return themes.find((t) => t.id === themeId);
+export function getThemeById(themeId: string) {
+  return getTheme(themeId);
 }
 
-/**
- * Get all available themes
- */
-export function getAllThemes(): Theme[] {
-  return themes;
+export function getAllThemes() {
+  // Return in the old Theme shape so existing Settings.tsx keeps working
+  return allThemes.map(t => ({
+    id: t.id,
+    name: t.name,
+    bgPrimary: t.bg,
+    bgSecondary: t.bg2,
+    textPrimary: t.text,
+    textSecondary: t.sub,
+    accent: t.main,
+    error: t.error,
+    correct: t.text,
+    caretColor: t.main,
+  } as Theme));
 }
+
+// ── Font application ──────────────────────────────────────────────
 
 export const FONTS: { id: string; label: string; stack: string }[] = [
   { id: 'Roboto Mono',     label: 'Roboto Mono',     stack: "'Roboto Mono', monospace" },
@@ -47,9 +46,11 @@ export const FONTS: { id: string; label: string; stack: string }[] = [
 ];
 
 export function applyFont(fontId: string) {
-  const font = FONTS.find((f) => f.id === fontId);
-  document.documentElement.style.setProperty(
-    '--font-family',
-    font ? font.stack : "'Roboto Mono', monospace"
-  );
+  // Try new font system first (kebab-case IDs)
+  applyNTFont(fontId);
+  // Also handle old-style name IDs (e.g. 'Roboto Mono') for backward compat
+  const old = FONTS.find(f => f.id === fontId);
+  if (old) {
+    document.documentElement.style.setProperty('--font-family', old.stack);
+  }
 }
