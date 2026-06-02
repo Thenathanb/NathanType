@@ -1,23 +1,12 @@
-import { useEffect, useState } from 'react';
-import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTestResults } from '../../hooks/useTestResults';
 import type { TimeRange, ModeFilter } from './ResultFilters';
-
-interface TestRow {
-  id: string;
-  timestamp: number;
-  mode: string;
-  modeOption: number;
-  wpm: number;
-  rawWpm: number;
-  accuracy: number;
-  consistency: number;
-}
 
 function fmtDate(ts: number) {
   return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
 }
+
 function timeRangeCutoff(r: TimeRange): number {
   const d = { day: 1, week: 7, month: 30, '3month': 90, all: 36500 }[r];
   return Date.now() - d * 86_400_000;
@@ -25,32 +14,17 @@ function timeRangeCutoff(r: TimeRange): number {
 
 export function ResultsTable({ timeRange, modeFilter }: { timeRange: TimeRange; modeFilter: ModeFilter }) {
   const { currentUser } = useAuth();
-  const [rows, setRows] = useState<TestRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { results, loading, error } = useTestResults(currentUser?.uid);
 
-  useEffect(() => {
-    if (!currentUser) return;
-    setLoading(true);
-    setError('');
+  const rows = useMemo(() => {
     const cutoff = timeRangeCutoff(timeRange);
-    const q = query(
-      collection(db, 'testResults', currentUser.uid, 'results'),
-      where('timestamp', '>=', cutoff),
-      orderBy('timestamp', 'desc'),
-      limit(50),
-    );
-    getDocs(q)
-      .then(snap => setRows(snap.docs.map(d => ({ id: d.id, ...d.data() } as TestRow))))
-      .catch(err => {
-        console.error('ResultsTable load failed:', err);
-        const msg = (err as { code?: string }).code === 'permission-denied'
-          ? 'permission denied — update your Firestore rules for testResults'
-          : `failed to load results (${(err as Error).message ?? 'unknown'})`;
-        setError(msg);
-      })
-      .finally(() => setLoading(false));
-  }, [currentUser, timeRange, modeFilter]);
+    return results
+      .filter(r =>
+        r.timestamp >= cutoff &&
+        (modeFilter === 'all' || r.mode === modeFilter),
+      )
+      .slice(0, 50);
+  }, [results, timeRange, modeFilter]);
 
   if (loading) return <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13, padding: '16px 0' }}>loading results…</div>;
 

@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTestResults } from '../../hooks/useTestResults';
 
 type Range = '12m' | '6m' | '30d';
 
@@ -19,40 +18,22 @@ function toDateKey(ts: number) {
 
 export function ActivityHeatmap() {
   const { currentUser } = useAuth();
+  const { results, loading, error } = useTestResults(currentUser?.uid);
   const [range, setRange] = useState<Range>('12m');
-  const [dayCounts, setDayCounts] = useState<Record<string, number>>({});
-  const [total, setTotal] = useState(0);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!currentUser) return;
-    setLoading(true);
-    setError('');
+  const { dayCounts, total } = useMemo(() => {
     const days = range === '12m' ? 365 : range === '6m' ? 182 : 30;
     const cutoff = Date.now() - days * 86_400_000;
-
-    getDocs(query(
-      collection(db, 'testResults', currentUser.uid, 'results'),
-      where('timestamp', '>=', cutoff),
-      orderBy('timestamp', 'asc'),
-    )).then(snap => {
-      const counts: Record<string, number> = {};
-      snap.forEach(d => {
-        const key = toDateKey((d.data() as { timestamp: number }).timestamp);
-        counts[key] = (counts[key] ?? 0) + 1;
-      });
-      setDayCounts(counts);
-      setTotal(snap.size);
-    }).catch(err => {
-      console.error('ActivityHeatmap load failed:', err);
-      const msg = (err as { code?: string }).code === 'permission-denied'
-        ? 'permission denied — check your Firestore rules for testResults collection'
-        : `failed to load activity (${(err as Error).message ?? 'unknown error'})`;
-      setError(msg);
-    }).finally(() => setLoading(false));
-  }, [currentUser, range]);
+    const counts: Record<string, number> = {};
+    let n = 0;
+    for (const r of results) {
+      if (r.timestamp < cutoff) continue;
+      counts[toDateKey(r.timestamp)] = (counts[toDateKey(r.timestamp)] ?? 0) + 1;
+      n++;
+    }
+    return { dayCounts: counts, total: n };
+  }, [results, range]);
 
   const cells = useMemo(() => {
     const days = range === '12m' ? 365 : range === '6m' ? 182 : 30;
@@ -74,7 +55,6 @@ export function ActivityHeatmap() {
 
   return (
     <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: 'var(--bg2)', position: 'relative' }}>
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <select
@@ -99,14 +79,12 @@ export function ActivityHeatmap() {
         </div>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="mb-3 font-mono rounded px-3 py-2" style={{ backgroundColor: 'color-mix(in srgb, var(--error) 10%, transparent)', color: 'var(--error)', fontSize: 12 }}>
           {error}
         </div>
       )}
 
-      {/* Grid */}
       {!error && (
         <div className="flex gap-1.5 overflow-x-auto">
           <div className="flex flex-col gap-0.5 shrink-0">

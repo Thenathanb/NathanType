@@ -8,6 +8,7 @@ import { generateTestWords, generateWords } from '../utils/wordGenerator';
 import { getPbKey } from '../stores/userStore';
 import { useAuth } from '../context/AuthContext';
 import { saveTestResult, incrementTestsStarted } from '../utils/firestoreService';
+import { invalidateTestResultsCache } from './useTestResults';
 import { getActiveFunboxWords } from '../utils/funbox/index';
 import {
   CONTENT_FUNBOXES, MEME_FUNBOXES, MUSIC_FUNBOXES, isContentFunbox,
@@ -490,7 +491,10 @@ export function useTypingTest() {
         },
         stats.timeElapsed
       )
-        .then((xpResult) => { useTestStore.getState().setXpResult(xpResult); })
+        .then((xpResult) => {
+          useTestStore.getState().setXpResult(xpResult);
+          invalidateTestResultsCache(currentUser.uid);
+        })
         .catch((err) => { console.error('Firestore save failed:', err); });
     }
   }, [checkAndUpdatePersonalBest, addTestResult, updateUserStats, currentUser]);

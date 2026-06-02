@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, type User } from 'firebase/auth'
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
 export interface UserProfile {
@@ -60,15 +60,38 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
 })
 
+// ── Profile cache helpers (localStorage) ─────────────────────────
+// Saves the profile so /account renders instantly from cache on next visit.
+const cacheKey = (uid: string) => `nt-profile-${uid}`
+
+function readCache(uid: string): UserProfile | null {
+  try {
+    const raw = localStorage.getItem(cacheKey(uid))
+    return raw ? (JSON.parse(raw) as UserProfile) : null
+  } catch {
+    return null
+  }
+}
+
+function writeCache(uid: string, profile: UserProfile): void {
+  try {
+    localStorage.setItem(cacheKey(uid), JSON.stringify(profile))
+  } catch { /* storage full — ignore */ }
+}
+
+function clearCache(uid: string): void {
+  try { localStorage.removeItem(cacheKey(uid)) } catch { /* ignore */ }
+}
+
+// ── Provider ─────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const unsubSnapshotRef = useRef<(() => void) | null>(null)
+  const [currentUser, setCurrentUser]   = useState<User | null>(null)
+  const [userProfile, setUserProfile]   = useState<UserProfile | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const unsubSnapshotRef                = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      // Unsubscribe from previous user's snapshot
       if (unsubSnapshotRef.current) {
         unsubSnapshotRef.current()
         unsubSnapshotRef.current = null
@@ -76,12 +99,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setCurrentUser(user)
 
-      if (user) {
-        const userRef = doc(db, 'users', user.uid)
+      if (!user) {
+        setUserProfile(null)
+        setLoading(false)
+        return
+      }
 
-        try {
-          const snap = await getDoc(userRef)
-          if (!snap.exists()) {
+      // ── 1. Serve cached profile immediately (0 ms) ──────────────
+      const cached = readCache(user.uid)
+      if (cached) {
+        setUserProfile(cached)
+        setLoading(false)   // page renders instantly from cache
+      }
+
+      const userRef = doc(db, 'users', user.uid)
+
+      // ── 2. Real-time snapshot — skips the blocking getDoc round-trip.
+      //       If doc doesn't exist (first sign-in), create it here.
+      unsubSnapshotRef.current = onSnapshot(userRef, async (snap) => {
+        if (snap.exists()) {
+          const profile = snap.data() as UserProfile
+          setUserProfile(profile)
+          writeCache(user.uid, profile)
+          setLoading(false)
+        } else {
+          // First sign-in: create the user doc. Snapshot will re-fire with data.
+          try {
             const providerId = user.providerData[0]?.providerId
             const provider: UserProfile['provider'] =
               providerId === 'google.com' ? 'google' :
@@ -109,22 +152,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               bestWpmDates: { time15: null, time30: null, time60: null, time120: null, words10: null, words25: null, words50: null, words100: null },
             }
             await setDoc(userRef, newProfile)
+          } catch (err) {
+            console.error('Failed to initialize user document:', err)
+            setLoading(false)
           }
-        } catch (err) {
-          console.error('Failed to initialize user document:', err)
         }
-
-        // Subscribe to real-time profile updates
-        unsubSnapshotRef.current = onSnapshot(userRef, (snap) => {
-          if (snap.exists()) setUserProfile(snap.data() as UserProfile)
-        }, (err) => {
-          console.error('Firestore snapshot error:', err)
-        })
-      } else {
-        setUserProfile(null)
-      }
-
-      setLoading(false)
+      }, (err) => {
+        console.error('Firestore snapshot error:', err)
+        setLoading(false)
+      })
     })
 
     return () => {
@@ -141,3 +177,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useAuth = () => useContext(AuthContext)
+
+/** Call on sign-out to wipe the local profile cache. */
+export function clearProfileCache(uid: string) {
+  clearCache(uid)
+}
