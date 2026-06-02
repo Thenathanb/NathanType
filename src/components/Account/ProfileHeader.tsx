@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, getCompletedTests, getStartedTests, getTimeTyping, getStreakLength, getStreakMax, getAddedAt } from '../../context/AuthContext';
 import { updateUserProfile } from '../../utils/firestoreService';
 import { getLevelTier, getNextTier, getXpDetails } from '../../data/levels/levels';
 
@@ -34,9 +34,9 @@ export function ProfileHeader() {
   const tier = getLevelTier(xpDetails.level);
   const nextTier = getNextTier(xpDetails.level);
 
-  const testsCompleted = userProfile.totalTests ?? 0;
-  const testsStarted   = userProfile.testsStarted ?? testsCompleted;
-  const timeTyping     = userProfile.totalTimeTyping ?? 0;
+  const testsCompleted = getCompletedTests(userProfile);
+  const testsStarted   = getStartedTests(userProfile);
+  const timeTyping     = getTimeTyping(userProfile);
 
   const saveName = async () => {
     if (!nameVal.trim()) return;
@@ -96,12 +96,12 @@ export function ProfileHeader() {
             ) : (
               <div className="font-mono font-medium mb-1" style={{ color: 'var(--text)', fontSize: 22 }}>{displayName}</div>
             )}
-            <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>joined {fmtDate(userProfile.createdAt)}</div>
-            {userProfile.currentStreak > 0 && (
+            <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>joined {fmtDate(getAddedAt(userProfile))}</div>
+            {getStreakLength(userProfile) > 0 && (
               <div className="flex items-center gap-1 mt-0.5 font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>
                 <span style={{ color: 'var(--main)' }}>🔥</span>
-                <span style={{ color: 'var(--main)' }}>{userProfile.currentStreak}</span>
-                <span>day streak · best: {userProfile.bestStreak ?? 0}</span>
+                <span style={{ color: 'var(--main)' }}>{getStreakLength(userProfile)}</span>
+                <span>day streak · best: {getStreakMax(userProfile)}</span>
               </div>
             )}
 

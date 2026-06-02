@@ -1,4 +1,4 @@
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, getPbEntry } from '../../context/AuthContext';
 
 const PERCENTILE_TABLE = [
   { min: 90, pct: '5%' },
@@ -30,8 +30,10 @@ export function LeaderboardCard() {
   const { userProfile } = useAuth();
   if (!userProfile) return null;
 
-  const wpm15 = userProfile.bestWpm.time15;
-  const wpm60 = userProfile.bestWpm.time60;
+  const pb15 = userProfile ? getPbEntry(userProfile, 'time', '15') : null
+  const pb60 = userProfile ? getPbEntry(userProfile, 'time', '60') : null
+  const wpm15 = pb15?.wpm ?? 0
+  const wpm60 = pb60?.wpm ?? 0
 
   return (
     <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: 'var(--bg2)' }}>

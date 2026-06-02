@@ -4,22 +4,44 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import toast from 'react-hot-toast'
 import { auth, db } from '../firebase'
 
+export interface PersonalBestEntry {
+  wpm: number
+  raw: number
+  acc: number
+  consistency: number
+  timestamp: number
+}
+
 export interface UserProfile {
   displayName: string
   username: string
   email: string
   photoURL: string | null
   provider: 'google' | 'github' | 'email'
-  createdAt: number
+  addedAt: number          // creation timestamp (primary)
+  createdAt?: number       // legacy alias — read-only, never write after addedAt exists
   level: number
   xp: number
   xpToNextLevel: number
-  totalTests: number
-  testsStarted: number
-  totalTimeTyping: number
-  currentStreak: number
-  bestStreak: number
-  lastTestDate: number | null
+
+  // Monkeytype-style counter field names
+  startedTests: number
+  completedTests: number
+  timeTyping: number       // total seconds typed
+
+  // Streak (Monkeytype nested structure)
+  streak: {
+    length: number
+    maxLength: number
+    lastResultTimestamp: number
+  }
+
+  // Personal bests (Monkeytype nested structure)
+  personalBests: {
+    time: Partial<Record<string, PersonalBestEntry>>
+    words: Partial<Record<string, PersonalBestEntry>>
+  }
+
   friends: Array<{ uid: string; since: number }>
   preferences: {
     defaultMode: string
@@ -27,26 +49,54 @@ export interface UserProfile {
     defaultWordLimit: number
     streakHourOffset: number
   }
-  bestWpm: {
-    time15: number
-    time30: number
-    time60: number
-    time120: number
-    words10: number
-    words25: number
-    words50: number
-    words100: number
+
+  // Legacy fields — kept for backward compat reads; never written after migration
+  testsStarted?: number
+  totalTests?: number
+  totalTimeTyping?: number
+  currentStreak?: number
+  bestStreak?: number
+  lastTestDate?: number | null
+  bestWpm?: { time15: number; time30: number; time60: number; time120: number; words10: number; words25: number; words50: number; words100: number }
+  bestWpmDates?: { time15: number | null; time30: number | null; time60: number | null; time120: number | null; words10: number | null; words25: number | null; words50: number | null; words100: number | null }
+}
+
+export function getCompletedTests(p: UserProfile): number {
+  return p.completedTests ?? p.totalTests ?? 0
+}
+export function getStartedTests(p: UserProfile): number {
+  return p.startedTests ?? p.testsStarted ?? 0
+}
+export function getTimeTyping(p: UserProfile): number {
+  return p.timeTyping ?? p.totalTimeTyping ?? 0
+}
+export function getStreakLength(p: UserProfile): number {
+  return p.streak?.length ?? p.currentStreak ?? 0
+}
+export function getStreakMax(p: UserProfile): number {
+  return p.streak?.maxLength ?? p.bestStreak ?? 0
+}
+export function getAddedAt(p: UserProfile): number {
+  return p.addedAt ?? p.createdAt ?? Date.now()
+}
+export function getPbEntry(p: UserProfile, mode: 'time' | 'words', mode2: string): PersonalBestEntry | null {
+  // Check new schema first
+  const newPb = p.personalBests?.[mode]?.[mode2]
+  if (newPb) return newPb
+  // Fall back to legacy flat bestWpm
+  const legacyKey = `${mode}${mode2}` as keyof NonNullable<UserProfile['bestWpm']>
+  const legacyWpm = p.bestWpm?.[legacyKey]
+  if (legacyWpm && legacyWpm > 0) {
+    const dateKey = legacyKey as keyof NonNullable<UserProfile['bestWpmDates']>
+    return {
+      wpm: legacyWpm,
+      raw: legacyWpm,
+      acc: 0,
+      consistency: 0,
+      timestamp: p.bestWpmDates?.[dateKey] ?? 0,
+    }
   }
-  bestWpmDates: {
-    time15: number | null
-    time30: number | null
-    time60: number | null
-    time120: number | null
-    words10: number | null
-    words25: number | null
-    words50: number | null
-    words100: number | null
-  }
+  return null
 }
 
 interface AuthContextValue {
@@ -137,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // ── 2. Real-time snapshot — skips the blocking getDoc round-trip.
       //       Only create the user doc when the SERVER (not local cache) confirms
-      //       it doesn't exist. This prevents overwriting createdAt on devices
+      //       it doesn't exist. This prevents overwriting addedAt on devices
       //       that have an empty offline cache for a user who already has a doc.
       unsubSnapshotRef.current = onSnapshot(userRef, async (snap) => {
         if (snap.exists()) {
@@ -159,20 +209,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: user.email || '',
               photoURL: user.photoURL || null,
               provider,
-              createdAt: Date.now(),
+              addedAt: Date.now(),
               level: 1,
               xp: 0,
               xpToNextLevel: 100,
-              totalTests: 0,
-              testsStarted: 0,
-              totalTimeTyping: 0,
-              currentStreak: 0,
-              bestStreak: 0,
-              lastTestDate: null,
+              startedTests: 0,
+              completedTests: 0,
+              timeTyping: 0,
+              streak: { length: 0, maxLength: 0, lastResultTimestamp: 0 },
+              personalBests: { time: {}, words: {} },
               friends: [],
               preferences: { defaultMode: 'time', defaultTimeLimit: 30, defaultWordLimit: 25, streakHourOffset: 0 },
-              bestWpm: { time15: 0, time30: 0, time60: 0, time120: 0, words10: 0, words25: 0, words50: 0, words100: 0 },
-              bestWpmDates: { time15: null, time30: null, time60: null, time120: null, words10: null, words25: null, words50: null, words100: null },
             }
             await setDoc(userRef, newProfile)
             // Snapshot re-fires automatically after setDoc — no manual setUserProfile needed.

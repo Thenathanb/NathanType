@@ -3,38 +3,43 @@ import { useParams } from 'react-router-dom';
 
 import { getUserByUsername } from '../utils/firestoreService';
 import type { UserProfile } from '../context/AuthContext';
+import { getPbEntry, getStreakLength, getAddedAt } from '../context/AuthContext';
 import { ActivityHeatmap } from '../components/Account/ActivityHeatmap';
 import { useAuth } from '../context/AuthContext';
 
 // Re-use the same PB grid but read-only from passed profile
 function PersonalBestsReadOnly({ profile }: { profile: UserProfile }) {
   const timeKeys = [
-    { key: 'time15' as const, label: '15s' }, { key: 'time30' as const, label: '30s' },
-    { key: 'time60' as const, label: '60s' }, { key: 'time120' as const, label: '120s' },
+    { mode2: '15', label: '15s' }, { mode2: '30', label: '30s' },
+    { mode2: '60', label: '60s' }, { mode2: '120', label: '120s' },
   ];
   const wordKeys = [
-    { key: 'words10' as const, label: '10' }, { key: 'words25' as const, label: '25' },
-    { key: 'words50' as const, label: '50' }, { key: 'words100' as const, label: '100' },
+    { mode2: '10', label: '10' }, { mode2: '25', label: '25' },
+    { mode2: '50', label: '50' }, { mode2: '100', label: '100' },
   ];
-  const Card = ({ title, cols }: { title: string; cols: { key: keyof UserProfile['bestWpm']; label: string }[] }) => (
+  const Card = ({ title, cols, modeType }: { title: string; cols: { mode2: string; label: string }[]; modeType: 'time' | 'words' }) => (
     <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: '#323437' }}>
       <div style={{ color: '#646669', fontSize: 13, marginBottom: 16 }}>{title}</div>
       <div className="grid grid-cols-4 gap-3">
-        {cols.map(c => (
-          <div key={c.key} className="text-center">
-            <div style={{ color: '#646669', fontSize: 11, marginBottom: 4 }}>{c.label}</div>
-            <div style={{ color: profile.bestWpm[c.key] > 0 ? '#d1d0ce' : '#3a3c3f', fontSize: 26, fontWeight: 500 }}>
-              {profile.bestWpm[c.key] > 0 ? profile.bestWpm[c.key] : '—'}
+        {cols.map(c => {
+          const pb = getPbEntry(profile, modeType, c.mode2)
+          const wpm = pb?.wpm ?? 0
+          return (
+            <div key={c.mode2} className="text-center">
+              <div style={{ color: '#646669', fontSize: 11, marginBottom: 4 }}>{c.label}</div>
+              <div style={{ color: wpm > 0 ? '#d1d0ce' : '#3a3c3f', fontSize: 26, fontWeight: 500 }}>
+                {wpm > 0 ? wpm : '—'}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   );
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Card title="time" cols={timeKeys} />
-      <Card title="words" cols={wordKeys} />
+      <Card title="time" cols={timeKeys} modeType="time" />
+      <Card title="words" cols={wordKeys} modeType="words" />
     </div>
   );
 }
@@ -88,9 +93,9 @@ export function PublicProfile() {
             )}
             <div className="flex-1">
               <div style={{ color: '#d1d0ce', fontSize: 22, fontWeight: 500 }}>{displayName}</div>
-              <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>joined {fmtDate(profile.createdAt)}</div>
-              {(profile.currentStreak ?? 0) > 0 && (
-                <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>🔥 {profile.currentStreak} day streak</div>
+              <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>joined {fmtDate(getAddedAt(profile))}</div>
+              {getStreakLength(profile) > 0 && (
+                <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>🔥 {getStreakLength(profile)} day streak</div>
               )}
               <div className="mt-3" style={{ maxWidth: 280 }}>
                 <div className="flex justify-between mb-1" style={{ fontSize: 12 }}>

@@ -1,6 +1,7 @@
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { logFirestoreError } from './errorLog'
+import type { PersonalBestEntry } from '../context/AuthContext'
 
 interface RawResult {
   wpm: number
@@ -13,12 +14,14 @@ interface RawResult {
   timestamp?: { toMillis?: () => number } | number
 }
 
-const PB_KEYS = ['time15','time30','time60','time120','words10','words25','words50','words100'] as const
-type PbKey = typeof PB_KEYS[number]
+const TIME_OPTIONS = ['15', '30', '60', '120'] as const
+const WORD_OPTIONS = ['10', '25', '50', '100'] as const
 
-function modeKey(mode: string, modeOption: number): PbKey | null {
-  const k = `${mode}${modeOption}` as PbKey
-  return PB_KEYS.includes(k) ? k : null
+function isTimeMode(mode: string, modeOption: string): boolean {
+  return mode === 'time' && (TIME_OPTIONS as readonly string[]).includes(modeOption)
+}
+function isWordsMode(mode: string, modeOption: string): boolean {
+  return mode === 'words' && (WORD_OPTIONS as readonly string[]).includes(modeOption)
 }
 
 export async function reconcileStats(uid: string): Promise<{ totalTests: number; fixed: string[] }> {
@@ -26,8 +29,11 @@ export async function reconcileStats(uid: string): Promise<{ totalTests: number;
 
   let totalTests = 0
   let totalTimeTyping = 0
-  const bestWpm: Record<PbKey, number> = Object.fromEntries(PB_KEYS.map(k => [k, 0])) as Record<PbKey, number>
-  const bestWpmDates: Record<PbKey, number | null> = Object.fromEntries(PB_KEYS.map(k => [k, null])) as Record<PbKey, number | null>
+
+  const personalBests: {
+    time: Partial<Record<string, PersonalBestEntry>>
+    words: Partial<Record<string, PersonalBestEntry>>
+  } = { time: {}, words: {} }
 
   resultsSnap.forEach(docSnap => {
     const r = docSnap.data() as RawResult
@@ -39,10 +45,30 @@ export async function reconcileStats(uid: string): Promise<{ totalTests: number;
         ?? r.clientTimestamp
         ?? Date.now()
 
-    const key = modeKey(r.mode, r.modeOption)
-    if (key && r.wpm > (bestWpm[key] ?? 0)) {
-      bestWpm[key] = r.wpm
-      bestWpmDates[key] = ts
+    const mode2 = String(r.modeOption)
+
+    if (isTimeMode(r.mode, mode2)) {
+      const existing = personalBests.time[mode2]
+      if (!existing || r.wpm > existing.wpm) {
+        personalBests.time[mode2] = {
+          wpm: r.wpm,
+          raw: r.rawWpm ?? r.wpm,
+          acc: r.accuracy ?? 0,
+          consistency: r.consistency ?? 0,
+          timestamp: ts,
+        }
+      }
+    } else if (isWordsMode(r.mode, mode2)) {
+      const existing = personalBests.words[mode2]
+      if (!existing || r.wpm > existing.wpm) {
+        personalBests.words[mode2] = {
+          wpm: r.wpm,
+          raw: r.rawWpm ?? r.wpm,
+          acc: r.accuracy ?? 0,
+          consistency: r.consistency ?? 0,
+          timestamp: ts,
+        }
+      }
     }
   })
 
@@ -51,14 +77,16 @@ export async function reconcileStats(uid: string): Promise<{ totalTests: number;
 
   try {
     await updateDoc(userRef, {
-      totalTests,
-      totalTimeTyping,
-      bestWpm,
-      bestWpmDates,
-      // don't touch: createdAt, xp, level, streak, testsStarted
+      completedTests: totalTests,
+      timeTyping: totalTimeTyping,
+      personalBests,
+      // don't touch: addedAt, xp, level, streak, startedTests
     })
-    fixed.push(`totalTests → ${totalTests}`)
-    fixed.push(`bestWpm updated for ${Object.values(bestWpm).filter(v => v > 0).length} modes`)
+    fixed.push(`completedTests → ${totalTests}`)
+    const pbCount =
+      Object.values(personalBests.time).filter(Boolean).length +
+      Object.values(personalBests.words).filter(Boolean).length
+    fixed.push(`personalBests updated for ${pbCount} modes`)
   } catch (err) {
     logFirestoreError('reconcileStats', err)
     throw err

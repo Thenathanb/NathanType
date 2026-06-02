@@ -18,18 +18,6 @@ export interface TestResultData {
   chars: { correct: number; incorrect: number; extra: number; missed: number }
 }
 
-type BestWpmKey = keyof UserProfile['bestWpm']
-
-function getBestWpmKey(mode: string, modeOption: number): BestWpmKey | null {
-  if (mode === 'time' && [15, 30, 60, 120].includes(modeOption)) {
-    return `time${modeOption}` as BestWpmKey
-  }
-  if (mode === 'words' && [10, 25, 50, 100].includes(modeOption)) {
-    return `words${modeOption}` as BestWpmKey
-  }
-  return null
-}
-
 /**
  * Monkeytype-style XP formula:
  * base = testDuration * 2  (2 XP per second)
@@ -100,29 +88,19 @@ export async function saveTestResult(
   timeElapsed: number
 ): Promise<XpResult> {
   const breakdown = calcXp(data, timeElapsed)
-  const xpGained  = breakdown.total
-
-  // Pre-create the result doc ref so we can include it in the transaction.
-  // Using doc(collection(...)) gives a client-generated ID without a write.
+  const xpGained = breakdown.total
   const resultRef = doc(collection(db, 'testResults', uid, 'results'))
-  const userRef   = doc(db, 'users', uid)
+  const userRef = doc(db, 'users', uid)
 
-  // Default — returned if the transaction fails so the UI still shows XP
   let xpResult: XpResult = {
-    xpGained,
-    xpBreakdown: breakdown,
-    didLevelUp: false,
-    prevLevel: 1,
-    newLevel: 1,
-    newXp: 0,
-    newXpToNextLevel: 100,
+    xpGained, xpBreakdown: breakdown,
+    didLevelUp: false, prevLevel: 1, newLevel: 1, newXp: 0, newXpToNextLevel: 100,
   }
 
   try {
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(userRef)
       if (!snap.exists()) {
-        // User doc missing — write the result but skip counter updates.
         tx.set(resultRef, {
           wpm: data.wpm, rawWpm: data.rawWpm, accuracy: data.accuracy,
           consistency: data.consistency, mode: data.mode, modeOption: data.modeOption,
@@ -134,80 +112,95 @@ export async function saveTestResult(
 
       const profile = snap.data() as UserProfile
 
-      // ── XP (cumulative total) ─────────────────────────────────────
+      // ── XP ────────────────────────────────────────────────────────
       const prevTotalXp = profile.xp ?? 0
-      const newTotalXp  = prevTotalXp + xpGained
-      const prevLevel   = getLevelFromTotalXp(prevTotalXp)
-      const newLevel    = getLevelFromTotalXp(newTotalXp)
-      const xpInLevel   = Math.max(0, newTotalXp - getTotalXpToReachLevel(newLevel))
-      const levelMaxXp  = getLevelMaxXp(newLevel)
-      const didLevelUp  = newLevel > prevLevel
+      const newTotalXp = prevTotalXp + xpGained
+      const prevLevel = getLevelFromTotalXp(prevTotalXp)
+      const newLevel = getLevelFromTotalXp(newTotalXp)
+      const xpInLevel = Math.max(0, newTotalXp - getTotalXpToReachLevel(newLevel))
+      const levelMaxXp = getLevelMaxXp(newLevel)
 
-      // ── Streak ───────────────────────────────────────────────────
-      const today        = new Date().toDateString()
-      const yesterday    = new Date(Date.now() - 86_400_000).toDateString()
-      const lastDate     = profile.lastTestDate ? new Date(profile.lastTestDate).toDateString() : null
-      let currentStreak  = profile.currentStreak ?? 0
-      if (lastDate === today) {
-        // already typed today — streak unchanged
-      } else if (lastDate === yesterday) {
-        currentStreak += 1
+      // ── Streak (Monkeytype structure) ─────────────────────────────
+      const now = Date.now()
+      const prevStreak = profile.streak
+      const lastTs = prevStreak?.lastResultTimestamp
+        ?? (profile as unknown as {lastTestDate?: number}).lastTestDate
+        ?? 0
+      const todayStr = new Date().toDateString()
+      const yesterdayStr = new Date(now - 86_400_000).toDateString()
+      const lastDateStr = lastTs ? new Date(lastTs).toDateString() : ''
+      let streakLen = prevStreak?.length ?? (profile as unknown as {currentStreak?: number}).currentStreak ?? 0
+      if (lastDateStr === todayStr) {
+        // already typed today, no change
+      } else if (lastDateStr === yesterdayStr) {
+        streakLen += 1
       } else {
-        currentStreak = 1
+        streakLen = 1
       }
-      const bestStreak = Math.max(profile.bestStreak ?? 0, currentStreak)
+      const streakMax = Math.max(
+        prevStreak?.maxLength ?? (profile as unknown as {bestStreak?: number}).bestStreak ?? 0,
+        streakLen
+      )
+      const newStreak = { length: streakLen, maxLength: streakMax, lastResultTimestamp: now }
 
-      // ── User doc update (use increment() to avoid stale-read races) ──
+      // ── Personal bests ────────────────────────────────────────────
+      const pbMode = (data.mode === 'time' ? 'time' : data.mode === 'words' ? 'words' : null)
+      const pbMode2 = String(data.modeOption)
       const userUpdates: Record<string, unknown> = {
         xp: newTotalXp,
         level: newLevel,
         xpToNextLevel: levelMaxXp,
-        totalTests: increment(1),
-        totalTimeTyping: increment(timeElapsed),
-        currentStreak,
-        bestStreak,
-        lastTestDate: serverTimestamp(),
+        completedTests: increment(1),
+        timeTyping: increment(timeElapsed),
+        streak: newStreak,
       }
 
-      // ── Personal best ─────────────────────────────────────────────
-      const pbKey = getBestWpmKey(data.mode, data.modeOption)
-      if (pbKey && data.wpm > (profile.bestWpm?.[pbKey] ?? 0)) {
-        userUpdates[`bestWpm.${pbKey}`]      = data.wpm
-        userUpdates[`bestWpmDates.${pbKey}`] = Date.now()
+      if (pbMode) {
+        // check both new nested schema and legacy flat bestWpm
+        const nestedPb = profile.personalBests?.[pbMode]?.[pbMode2]
+        const legacyKey = `${pbMode}${pbMode2}` as keyof NonNullable<UserProfile['bestWpm']>
+        const legacyWpm = profile.bestWpm?.[legacyKey] ?? 0
+        const currentBestWpm = nestedPb?.wpm ?? legacyWpm ?? 0
+        if (data.wpm > currentBestWpm) {
+          userUpdates[`personalBests.${pbMode}.${pbMode2}`] = {
+            wpm: data.wpm,
+            raw: data.rawWpm,
+            acc: data.accuracy,
+            consistency: data.consistency,
+            timestamp: now,
+          }
+        }
       }
 
-      // ── Result document ───────────────────────────────────────────
+      // Result doc and user doc in one atomic transaction
       tx.set(resultRef, {
         wpm: data.wpm, rawWpm: data.rawWpm, accuracy: data.accuracy,
         consistency: data.consistency, mode: data.mode, modeOption: data.modeOption,
         language: data.language, chars: data.chars,
         timestamp: serverTimestamp(), clientTimestamp: Date.now(),
       })
-
-      // Both writes go in the same transaction — atomic commit.
       tx.update(userRef, userUpdates)
 
       xpResult = {
         xpGained, xpBreakdown: breakdown,
-        didLevelUp, prevLevel, newLevel,
+        didLevelUp: newLevel > prevLevel, prevLevel, newLevel,
         newXp: xpInLevel, newXpToNextLevel: levelMaxXp,
       }
     })
   } catch (err) {
     logFirestoreError('saveTestResult', err)
-    // Queue for retry when connection recovers
     try {
       const { queueFailedSave } = await import('./saveQueue')
       queueFailedSave({ uid, data, timeElapsed })
-    } catch { /* saveQueue unavailable */ }
+    } catch { /* queue unavailable */ }
   }
 
   return xpResult
 }
 
-/** Fire-and-forget: increment testsStarted when the user types the first character. */
+/** Fire-and-forget: increment startedTests when the user types the first character. */
 export function incrementTestsStarted(uid: string): void {
-  updateDoc(doc(db, 'users', uid), { testsStarted: increment(1) })
+  updateDoc(doc(db, 'users', uid), { startedTests: increment(1) })
     .catch((err) => logFirestoreError('incrementTestsStarted', err))
 }
 

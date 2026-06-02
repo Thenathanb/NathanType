@@ -1,118 +1,105 @@
-import { useAuth } from '../../context/AuthContext';
-import type { UserProfile } from '../../context/AuthContext';
+import { useAuth, getPbEntry, type PersonalBestEntry } from '../../context/AuthContext'
+import { useState } from 'react'
 
-type BestWpmKey = keyof UserProfile['bestWpm'];
+const TIME_MODES = ['15', '30', '60', '120'] as const
+const WORD_MODES = ['10', '25', '50', '100'] as const
 
-const TIME_COLS: { key: BestWpmKey; label: string }[] = [
-  { key: 'time15',  label: '15 seconds' },
-  { key: 'time30',  label: '30 seconds' },
-  { key: 'time60',  label: '60 seconds' },
-  { key: 'time120', label: '120 seconds' },
-];
-const WORD_COLS: { key: BestWpmKey; label: string }[] = [
-  { key: 'words10',  label: '10 words' },
-  { key: 'words25',  label: '25 words' },
-  { key: 'words50',  label: '50 words' },
-  { key: 'words100', label: '100 words' },
-];
+function fmtDate(ts: number): string {
+  if (!ts) return ''
+  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
-export function PersonalBests() {
-  const { userProfile } = useAuth();
-  if (!userProfile) return null;
-
-  const hasSomePb = Object.values(userProfile.bestWpm).some(v => v > 0);
+function PbCell({ label, pb }: { label: string; pb: PersonalBestEntry | null }) {
+  const [hovered, setHovered] = useState(false)
+  const has = pb && pb.wpm > 0
 
   return (
-    <div className="flex flex-col gap-4">
-      <PbCard title="time" cols={TIME_COLS} bestWpm={userProfile.bestWpm} bestWpmDates={userProfile.bestWpmDates} />
-      <PbCard title="words" cols={WORD_COLS} bestWpm={userProfile.bestWpm} bestWpmDates={userProfile.bestWpmDates} />
+    <div
+      className="flex flex-col items-center font-mono"
+      style={{ padding: '16px 8px', minWidth: 0, position: 'relative' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ color: 'var(--sub)', fontSize: 12, marginBottom: 6 }}>{label}</div>
+      <div style={{
+        fontSize: 42, fontWeight: 700, lineHeight: 1,
+        color: has ? 'var(--main)' : 'color-mix(in srgb, var(--sub) 30%, transparent)',
+      }}>
+        {has ? pb.wpm : '—'}
+      </div>
+      {has && (
+        <div style={{ color: 'var(--sub)', fontSize: 12, marginTop: 4 }}>
+          {Math.round(pb.acc)}%
+        </div>
+      )}
 
-      {!hasSomePb && (
-        <div
-          className="rounded-xl p-5 font-mono text-center"
-          style={{ backgroundColor: 'var(--bg2)', color: 'var(--sub)', fontSize: 13 }}
-        >
-          complete a test in time or words mode to set a personal record
+      {/* Hover detail */}
+      {hovered && has && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'var(--bg)',
+          border: '0.5px solid rgba(255,255,255,0.12)',
+          borderRadius: 8, padding: '10px 14px',
+          zIndex: 20, whiteSpace: 'nowrap', textAlign: 'left',
+          fontSize: 12, lineHeight: 1.8,
+        }}>
+          <div style={{ color: 'var(--sub)' }}>{label}</div>
+          <div><span style={{ color: 'var(--sub)' }}>wpm </span><span style={{ color: 'var(--main)', fontWeight: 600 }}>{pb.wpm}</span></div>
+          <div><span style={{ color: 'var(--sub)' }}>raw </span><span style={{ color: 'var(--text)' }}>{pb.raw}</span></div>
+          <div><span style={{ color: 'var(--sub)' }}>acc </span><span style={{ color: 'var(--text)' }}>{pb.acc}%</span></div>
+          <div><span style={{ color: 'var(--sub)' }}>con </span><span style={{ color: 'var(--text)' }}>{Math.round(pb.consistency)}%</span></div>
+          {pb.timestamp > 0 && (
+            <div style={{ color: 'var(--sub)', marginTop: 4 }}>{fmtDate(pb.timestamp)}</div>
+          )}
         </div>
       )}
     </div>
-  );
+  )
 }
 
-function fmtDate(ts: number | null | undefined): string {
-  if (!ts) return '';
-  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function PbCard({
-  title,
-  cols,
-  bestWpm,
-  bestWpmDates,
-}: {
-  title: string;
-  cols: { key: BestWpmKey; label: string }[];
-  bestWpm: UserProfile['bestWpm'];
-  bestWpmDates: UserProfile['bestWpmDates'];
+function PbRow({ title, modes, modeType }: {
+  title: string
+  modes: readonly string[]
+  modeType: 'time' | 'words'
 }) {
+  const { userProfile } = useAuth()
+  if (!userProfile) return null
+  const pbs = modes.map(m => getPbEntry(userProfile, modeType, m))
+  const hasAny = pbs.some(pb => pb && pb.wpm > 0)
+
   return (
     <div className="rounded-xl font-mono" style={{ backgroundColor: 'var(--bg2)' }}>
-      {/* Card header */}
-      <div
-        className="flex items-center justify-between px-6 pt-5 pb-3"
-        style={{ borderBottom: '0.5px solid color-mix(in srgb, var(--sub) 15%, transparent)' }}
-      >
-        <span style={{ color: 'var(--sub)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          {title} — personal bests
-        </span>
-        <span style={{ color: 'var(--sub)', fontSize: 11 }}>wpm</span>
+      <div style={{
+        padding: '12px 20px 10px',
+        borderBottom: '0.5px solid color-mix(in srgb, var(--sub) 12%, transparent)',
+        color: 'var(--sub)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+      }}>
+        {title}
       </div>
-
-      {/* Column headers */}
-      <div className="grid px-6 pt-4 pb-1" style={{ gridTemplateColumns: `repeat(${cols.length}, 1fr)` }}>
-        {cols.map(c => (
-          <div key={c.key} className="text-center" style={{ color: 'var(--sub)', fontSize: 11 }}>
-            {c.label}
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${modes.length}, 1fr)` }}>
+        {modes.map((m, i) => (
+          <PbCell
+            key={m}
+            label={`${title === 'time' ? `${m} seconds` : `${m} words`}`}
+            pb={pbs[i]}
+          />
         ))}
       </div>
-
-      {/* WPM row */}
-      <div className="grid px-6 pb-2" style={{ gridTemplateColumns: `repeat(${cols.length}, 1fr)` }}>
-        {cols.map(c => {
-          const wpm = bestWpm[c.key];
-          const hasPb = wpm > 0;
-          return (
-            <div key={c.key} className="text-center">
-              <div
-                style={{
-                  fontSize: 36,
-                  fontWeight: 700,
-                  lineHeight: 1.1,
-                  color: hasPb ? 'var(--main)' : 'color-mix(in srgb, var(--sub) 25%, transparent)',
-                }}
-              >
-                {hasPb ? wpm : '—'}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Date row */}
-      <div
-        className="grid px-6 pb-5"
-        style={{ gridTemplateColumns: `repeat(${cols.length}, 1fr)` }}
-      >
-        {cols.map(c => {
-          const date = fmtDate((bestWpmDates as Record<string, number | null>)[c.key]);
-          return (
-            <div key={c.key} className="text-center" style={{ color: 'var(--sub)', fontSize: 10, minHeight: 14 }}>
-              {date}
-            </div>
-          );
-        })}
-      </div>
+      {!hasAny && (
+        <div style={{ padding: '0 20px 16px', color: 'var(--sub)', fontSize: 12, textAlign: 'center' }}>
+          no personal bests yet
+        </div>
+      )}
     </div>
-  );
+  )
+}
+
+export function PersonalBests() {
+  return (
+    <div className="flex flex-col gap-4">
+      <PbRow title="time"  modes={TIME_MODES} modeType="time" />
+      <PbRow title="words" modes={WORD_MODES} modeType="words" />
+    </div>
+  )
 }

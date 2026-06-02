@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, getPbEntry, getCompletedTests, getTimeTyping, getAddedAt } from '../context/AuthContext';
 
 interface TestHistoryEntry {
   id: string;
@@ -16,17 +16,15 @@ interface TestHistoryEntry {
 }
 
 const PB_MODES = [
-  { key: 'time15',   label: 'time 15' },
-  { key: 'time30',   label: 'time 30' },
-  { key: 'time60',   label: 'time 60' },
-  { key: 'time120',  label: 'time 120' },
-  { key: 'words10',  label: 'words 10' },
-  { key: 'words25',  label: 'words 25' },
-  { key: 'words50',  label: 'words 50' },
-  { key: 'words100', label: 'words 100' },
+  { mode: 'time'  as const, mode2: '15',  label: 'time 15' },
+  { mode: 'time'  as const, mode2: '30',  label: 'time 30' },
+  { mode: 'time'  as const, mode2: '60',  label: 'time 60' },
+  { mode: 'time'  as const, mode2: '120', label: 'time 120' },
+  { mode: 'words' as const, mode2: '10',  label: 'words 10' },
+  { mode: 'words' as const, mode2: '25',  label: 'words 25' },
+  { mode: 'words' as const, mode2: '50',  label: 'words 50' },
+  { mode: 'words' as const, mode2: '100', label: 'words 100' },
 ] as const;
-
-type PbKey = typeof PB_MODES[number]['key'];
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -75,12 +73,13 @@ export function Profile() {
   if (!currentUser || !userProfile) return <Navigate to="/" />;
 
   const initials = (userProfile.displayName || userProfile.email || '?')[0].toUpperCase();
-  const bestWpmOverall = Math.max(...Object.values(userProfile.bestWpm));
+  const allPbEntries = PB_MODES.map(m => getPbEntry(userProfile, m.mode, m.mode2))
+  const bestWpmOverall = allPbEntries.reduce((max, pb) => Math.max(max, pb?.wpm ?? 0), 0)
   const avgAccuracy = history.length > 0
     ? Math.round(history.reduce((sum, r) => sum + r.accuracy, 0) / history.length * 10) / 10
     : 0;
 
-  const pbRows = PB_MODES.filter(m => (userProfile.bestWpm[m.key as PbKey] || 0) > 0);
+  const pbRows = PB_MODES.filter((_m, i) => (allPbEntries[i]?.wpm ?? 0) > 0);
 
   const xpPct = Math.min(100, (userProfile.xp / userProfile.xpToNextLevel) * 100);
 
@@ -122,7 +121,7 @@ export function Profile() {
               signed in with {userProfile.provider}
             </span>
             <span style={{ color: '#646669', fontSize: 12 }}>
-              member since {formatDate(userProfile.createdAt)}
+              member since {formatDate(getAddedAt(userProfile))}
             </span>
           </div>
 
@@ -144,8 +143,8 @@ export function Profile() {
 
       {/* ── Stats grid ───────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <StatCard label="total tests" value={String(userProfile.totalTests)} />
-        <StatCard label="time typing" value={formatTime(userProfile.totalTimeTyping)} />
+        <StatCard label="total tests" value={String(getCompletedTests(userProfile))} />
+        <StatCard label="time typing" value={formatTime(getTimeTyping(userProfile))} />
         <StatCard label="best wpm" value={bestWpmOverall > 0 ? String(bestWpmOverall) : '—'} accent />
         <StatCard
           label="avg accuracy"
@@ -168,13 +167,12 @@ export function Profile() {
               </thead>
               <tbody>
                 {pbRows.map((m) => {
-                  const wpm = userProfile.bestWpm[m.key as PbKey];
-                  const dateTs = userProfile.bestWpmDates[m.key as PbKey];
+                  const pb = getPbEntry(userProfile, m.mode, m.mode2);
                   return (
-                    <tr key={m.key} style={{ borderBottom: '1px solid rgba(100,102,105,0.1)' }}>
+                    <tr key={m.label} style={{ borderBottom: '1px solid rgba(100,102,105,0.1)' }}>
                       <Td>{m.label}</Td>
-                      <Td accent>{wpm}</Td>
-                      <Td>{dateTs ? formatDateShort(dateTs) : '—'}</Td>
+                      <Td accent>{pb?.wpm ?? '—'}</Td>
+                      <Td>{pb?.timestamp ? formatDateShort(pb.timestamp) : '—'}</Td>
                     </tr>
                   );
                 })}

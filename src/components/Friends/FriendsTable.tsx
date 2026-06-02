@@ -3,7 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebase';
 import { removeFriend } from '../../utils/firestoreService';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, getPbEntry, getCompletedTests, getStartedTests, getTimeTyping, getStreakLength } from '../../context/AuthContext';
 import type { UserProfile } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -62,12 +62,12 @@ export function FriendsTable() {
       return sortDir === 'asc' ? an.localeCompare(bn) : bn.localeCompare(an);
     }
     let av = 0, bv = 0;
-    if (sortKey === 'level')  { av = a.profile.level;              bv = b.profile.level; }
-    if (sortKey === 'tests')  { av = a.profile.totalTests;         bv = b.profile.totalTests; }
-    if (sortKey === 'time')   { av = a.profile.totalTimeTyping;    bv = b.profile.totalTimeTyping; }
-    if (sortKey === 'streak') { av = a.profile.currentStreak ?? 0; bv = b.profile.currentStreak ?? 0; }
-    if (sortKey === 'pb15')   { av = a.profile.bestWpm.time15;     bv = b.profile.bestWpm.time15; }
-    if (sortKey === 'pb60')   { av = a.profile.bestWpm.time60;     bv = b.profile.bestWpm.time60; }
+    if (sortKey === 'level')  { av = a.profile.level;                                 bv = b.profile.level; }
+    if (sortKey === 'tests')  { av = getCompletedTests(a.profile);                    bv = getCompletedTests(b.profile); }
+    if (sortKey === 'time')   { av = getTimeTyping(a.profile);                        bv = getTimeTyping(b.profile); }
+    if (sortKey === 'streak') { av = getStreakLength(a.profile);                      bv = getStreakLength(b.profile); }
+    if (sortKey === 'pb15')   { av = getPbEntry(a.profile, 'time', '15')?.wpm ?? 0;  bv = getPbEntry(b.profile, 'time', '15')?.wpm ?? 0; }
+    if (sortKey === 'pb60')   { av = getPbEntry(a.profile, 'time', '60')?.wpm ?? 0;  bv = getPbEntry(b.profile, 'time', '60')?.wpm ?? 0; }
     return sortDir === 'asc' ? av - bv : bv - av;
   });
 
@@ -141,15 +141,15 @@ export function FriendsTable() {
                 </td>
                 <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{ago(f.since)}</td>
                 <td style={{ color: 'var(--text)', paddingRight: 16 }}>{f.profile.level}</td>
-                <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{f.profile.totalTests}/{f.profile.testsStarted ?? f.profile.totalTests}</td>
-                <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{fmt(f.profile.totalTimeTyping)}</td>
+                <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{getCompletedTests(f.profile)}/{getStartedTests(f.profile)}</td>
+                <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{fmt(getTimeTyping(f.profile))}</td>
                 <td style={{ paddingRight: 16 }}>
-                  {(f.profile.currentStreak ?? 0) > 0
-                    ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--text)' }}>{f.profile.currentStreak}</span></span>
+                  {getStreakLength(f.profile) > 0
+                    ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--text)' }}>{getStreakLength(f.profile)}</span></span>
                     : <span style={{ color: 'var(--sub)' }}>—</span>}
                 </td>
-                <td style={{ color: 'var(--text)', paddingRight: 16 }}>{f.profile.bestWpm.time15 || '—'}</td>
-                <td style={{ color: 'var(--text)', paddingRight: 16 }}>{f.profile.bestWpm.time60 || '—'}</td>
+                <td style={{ color: 'var(--text)', paddingRight: 16 }}>{getPbEntry(f.profile, 'time', '15')?.wpm || '—'}</td>
+                <td style={{ color: 'var(--text)', paddingRight: 16 }}>{getPbEntry(f.profile, 'time', '60')?.wpm || '—'}</td>
                 <td>
                   {hoverUid === f.uid && (
                     <button onClick={() => remove(f.uid, name)} title="remove friend"
@@ -185,15 +185,15 @@ export function FriendsTable() {
             </td>
             <td style={{ color: 'var(--sub)', paddingRight: 16 }}>—</td>
             <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.level}</td>
-            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.totalTests}/{ownProfile.testsStarted ?? ownProfile.totalTests}</td>
-            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{fmt(ownProfile.totalTimeTyping)}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{getCompletedTests(ownProfile)}/{getStartedTests(ownProfile)}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{fmt(getTimeTyping(ownProfile))}</td>
             <td style={{ paddingRight: 16 }}>
-              {(ownProfile.currentStreak ?? 0) > 0
-                ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--main)' }}>{ownProfile.currentStreak}</span></span>
+              {getStreakLength(ownProfile) > 0
+                ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--main)' }}>{getStreakLength(ownProfile)}</span></span>
                 : <span style={{ color: 'var(--sub)' }}>—</span>}
             </td>
-            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.bestWpm.time15 || '—'}</td>
-            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.bestWpm.time60 || '—'}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{getPbEntry(ownProfile, 'time', '15')?.wpm || '—'}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{getPbEntry(ownProfile, 'time', '60')?.wpm || '—'}</td>
             <td />
           </tr>
         </tbody>
