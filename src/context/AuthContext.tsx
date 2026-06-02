@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { getRedirectResult, onAuthStateChanged, type User } from 'firebase/auth'
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
+import toast from 'react-hot-toast'
 import { auth, db } from '../firebase'
 
 export interface UserProfile {
@@ -91,14 +92,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const unsubSnapshotRef                = useRef<(() => void) | null>(null)
 
   // Handle the result of a signInWithRedirect call.
-  // Must run once on mount before onAuthStateChanged to catch errors
-  // (e.g. user denied GitHub permission, unauthorized domain).
+  // Runs once on mount to surface any error that came back from the OAuth provider.
   useEffect(() => {
     getRedirectResult(auth).catch((err: unknown) => {
       const code = (err as { code?: string }).code ?? ''
-      // auth/popup-closed-by-user and cancelled are non-errors — skip them
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return
       console.error('[OAuth redirect error]', err)
+
+      // Show a human-readable toast so the error is visible in the app
+      if (code === 'auth/unauthorized-domain') {
+        toast.error('This domain is not authorised in Firebase — add thenathanb.github.io in the Firebase console', { duration: 8000 })
+      } else if (code) {
+        toast.error(`Sign-in failed: ${code}`, { duration: 6000 })
+      }
     })
   }, [])
 
