@@ -68,6 +68,7 @@ export function useTypingTest() {
 
   const timerRef = useRef<number | undefined>(undefined);
   const wpmTrackerRef = useRef<number | undefined>(undefined);
+  const prevErrorsRef = useRef(0);
   const soundsRef = useRef<{ playKeySound: (v?: number) => void; playErrorSound: (v?: number) => void } | null>(null);
 
   // Lazy-load sounds module to avoid AudioContext issues on initial render
@@ -526,15 +527,21 @@ export function useTypingTest() {
   // WPM tracker — reads fresh store values via getState() so interval is stable
   useEffect(() => {
     if (isActive && !isComplete) {
+      prevErrorsRef.current = 0;
       wpmTrackerRef.current = window.setInterval(() => {
         const { typedHistory: th, startTime: st } = useTestStore.getState();
         if (!st) return;
         const elapsed = Date.now() - st;
+        const totalErrors = th.reduce((n, w) =>
+          n + w.charStates.filter(s => s === 'incorrect' || s === 'extra').length, 0);
+        const errorsThisSecond = Math.max(0, totalErrors - prevErrorsRef.current);
+        prevErrorsRef.current = totalErrors;
         const dataPoint: WpmDataPoint = {
           time: elapsed / 1000,
           wpm: calculateWpm(th, elapsed),
           rawWpm: calculateRawWpm(th, elapsed),
           accuracy: calculateAccuracy(th),
+          errors: errorsThisSecond,
         };
         addWpmDataPoint(dataPoint);
       }, 1000);
@@ -663,6 +670,7 @@ export function useTypingTest() {
   const handleRestart = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current);
+    prevErrorsRef.current = 0;
     resetTest();
     setCurrentInput('');
     setTimeRemaining(timeLimit);

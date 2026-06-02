@@ -81,6 +81,7 @@ export interface WpmDataPoint {
   wpm: number;
   rawWpm: number;
   accuracy: number;
+  errors: number; // errors in this 1-second interval
 }
 
 // Test Result (saved after completion)
