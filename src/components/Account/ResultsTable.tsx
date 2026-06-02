@@ -13,7 +13,6 @@ interface TestRow {
   rawWpm: number;
   accuracy: number;
   consistency: number;
-  duration?: number;
 }
 
 function fmtDate(ts: number) {
@@ -28,36 +27,49 @@ export function ResultsTable({ timeRange, modeFilter }: { timeRange: TimeRange; 
   const { currentUser } = useAuth();
   const [rows, setRows] = useState<TestRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!currentUser) return;
     setLoading(true);
+    setError('');
     const cutoff = timeRangeCutoff(timeRange);
     const q = query(
       collection(db, 'testResults', currentUser.uid, 'results'),
       where('timestamp', '>=', cutoff),
       orderBy('timestamp', 'desc'),
-      limit(50),
+      limit(100),
     );
     getDocs(q)
       .then(snap => setRows(snap.docs.map(d => ({ id: d.id, ...d.data() } as TestRow))))
-      .catch(console.error)
+      .catch(err => {
+        console.error('ResultsTable load failed:', err);
+        const msg = (err as { code?: string }).code === 'permission-denied'
+          ? 'permission denied — update your Firestore rules for testResults'
+          : `failed to load results (${(err as Error).message ?? 'unknown'})`;
+        setError(msg);
+      })
       .finally(() => setLoading(false));
   }, [currentUser, timeRange, modeFilter]);
 
-  if (loading) return <div className="font-mono" style={{ color: '#646669', fontSize: 13, padding: '16px 0' }}>loading results…</div>;
-  if (!rows.length) return <div className="font-mono" style={{ color: '#646669', fontSize: 13, padding: '16px 0' }}>no results found</div>;
+  if (loading) return <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13, padding: '16px 0' }}>loading results…</div>;
 
-  const COLS = ['date', 'mode', 'wpm', 'raw', 'acc', 'consistency', 'duration'];
+  if (error) return (
+    <div className="font-mono rounded px-3 py-2" style={{ backgroundColor: 'color-mix(in srgb, var(--error) 10%, transparent)', color: 'var(--error)', fontSize: 12, marginTop: 8 }}>
+      {error}
+    </div>
+  );
+
+  if (!rows.length) return <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13, padding: '16px 0' }}>no results found</div>;
 
   return (
     <div style={{ overflowX: 'auto' }}>
       <table className="w-full font-mono" style={{ borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>
-            {COLS.map(c => (
+            {['date', 'mode', 'wpm', 'raw', 'acc', 'consistency'].map(c => (
               <th key={c} className="text-left py-2 uppercase tracking-wider"
-                style={{ color: '#646669', fontSize: 11, fontWeight: 400, borderBottom: '0.5px solid rgba(255,255,255,0.05)', paddingRight: 20 }}>
+                style={{ color: 'var(--sub)', fontSize: 11, fontWeight: 400, borderBottom: '0.5px solid rgba(255,255,255,0.05)', paddingRight: 20 }}>
                 {c}
               </th>
             ))}
@@ -66,13 +78,12 @@ export function ResultsTable({ timeRange, modeFilter }: { timeRange: TimeRange; 
         <tbody>
           {rows.map((r, i) => (
             <tr key={r.id} style={{ backgroundColor: i % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent', height: 40, borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-              <td style={{ color: '#646669', paddingRight: 20 }}>{fmtDate(r.timestamp)}</td>
-              <td style={{ color: '#646669', paddingRight: 20 }}>{r.mode} {r.modeOption}</td>
-              <td style={{ color: '#d1d0ce', paddingRight: 20 }}>{r.wpm}</td>
-              <td style={{ color: '#d1d0ce', paddingRight: 20 }}>{r.rawWpm}</td>
-              <td style={{ color: '#d1d0ce', paddingRight: 20 }}>{r.accuracy}%</td>
-              <td style={{ color: '#d1d0ce', paddingRight: 20 }}>{r.consistency}%</td>
-              <td style={{ color: '#646669' }}>{r.duration ? `${r.duration}s` : '—'}</td>
+              <td style={{ color: 'var(--sub)', paddingRight: 20 }}>{fmtDate(r.timestamp)}</td>
+              <td style={{ color: 'var(--sub)', paddingRight: 20 }}>{r.mode} {r.modeOption}</td>
+              <td style={{ color: 'var(--main)', paddingRight: 20, fontWeight: 500 }}>{r.wpm}</td>
+              <td style={{ color: 'var(--text)', paddingRight: 20 }}>{r.rawWpm}</td>
+              <td style={{ color: 'var(--text)', paddingRight: 20 }}>{r.accuracy}%</td>
+              <td style={{ color: 'var(--text)', paddingRight: 20 }}>{r.consistency}%</td>
             </tr>
           ))}
         </tbody>

@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, runTransaction, setDoc } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, increment, runTransaction, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { UserProfile } from '../context/AuthContext'
 import type { XpResult } from '../types/index.js'
@@ -36,18 +36,23 @@ export async function saveTestResult(
   const memeTax = data.mode === 'meme' ? 5 : 0
   const totalXP = baseXP + bonusXP + memeTax
 
-  // Save test result document (fire and forget — don't block XP calculation)
-  addDoc(collection(db, 'testResults', uid, 'results'), {
-    wpm: data.wpm,
-    rawWpm: data.rawWpm,
-    accuracy: data.accuracy,
-    consistency: data.consistency,
-    mode: data.mode,
-    modeOption: data.modeOption,
-    language: data.language,
-    chars: data.chars,
-    timestamp: Date.now(),
-  }).catch((err) => console.error('Failed to save test result doc:', err))
+  // Save the test result document — await it so failures surface properly
+  try {
+    await addDoc(collection(db, 'testResults', uid, 'results'), {
+      wpm: data.wpm,
+      rawWpm: data.rawWpm,
+      accuracy: data.accuracy,
+      consistency: data.consistency,
+      mode: data.mode,
+      modeOption: data.modeOption,
+      language: data.language,
+      chars: data.chars,
+      timestamp: Date.now(),
+    })
+  } catch (err) {
+    console.error('Failed to save test result doc:', err)
+    // Don't block XP — continue even if the result save fails
+  }
 
   let xpResult: XpResult = {
     xpGained: totalXP,
@@ -117,6 +122,12 @@ export async function saveTestResult(
   }
 
   return xpResult
+}
+
+/** Fire-and-forget: increment testsStarted when a new test begins. */
+export function incrementTestsStarted(uid: string): void {
+  updateDoc(doc(db, 'users', uid), { testsStarted: increment(1) })
+    .catch((err) => console.error('incrementTestsStarted failed:', err))
 }
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {

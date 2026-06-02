@@ -22,7 +22,6 @@ function ordinal(n: number) {
 }
 
 function wpmToRank(wpm: number): number {
-  // Approximate rank from a 10,000-player pool
   const pct = parseFloat(getPercentile(wpm)) / 100;
   return Math.max(1, Math.round(pct * 10000));
 }
@@ -31,36 +30,34 @@ export function LeaderboardCard() {
   const { userProfile } = useAuth();
   if (!userProfile) return null;
 
-  const wpm15  = userProfile.bestWpm.time15;
-  const wpm60  = userProfile.bestWpm.time60;
-
-  const has15 = wpm15 > 0;
-  const has60 = wpm60 > 0;
+  const wpm15 = userProfile.bestWpm.time15;
+  const wpm60 = userProfile.bestWpm.time60;
 
   return (
-    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: '#323437' }}>
+    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: 'var(--bg2)' }}>
       <div className="flex items-center justify-between mb-4">
-        <span style={{ color: '#646669', fontSize: 13 }}>All-Time English Leaderboards</span>
+        <span style={{ color: 'var(--sub)', fontSize: 13 }}>All-Time English Leaderboards</span>
       </div>
       <div className="grid grid-cols-2 gap-6">
-        <RankBlock label="15 seconds" wpm={wpm15} has={has15} />
-        <RankBlock label="60 seconds" wpm={wpm60} has={has60} />
+        <RankBlock label="15 seconds" wpm={wpm15} />
+        <RankBlock label="60 seconds" wpm={wpm60} />
       </div>
     </div>
   );
 }
 
-function RankBlock({ label, wpm, has }: { label: string; wpm: number; has: boolean }) {
+function RankBlock({ label, wpm }: { label: string; wpm: number }) {
+  const has = wpm > 0;
   return (
     <div>
-      <div style={{ color: '#646669', fontSize: 12, marginBottom: 6 }}>{label}</div>
+      <div style={{ color: 'var(--sub)', fontSize: 12, marginBottom: 6 }}>{label}</div>
       {has ? (
         <>
-          <div style={{ color: '#d1d0ce', fontSize: 36, fontWeight: 500, lineHeight: 1 }}>{ordinal(wpmToRank(wpm))}</div>
-          <div style={{ color: '#646669', fontSize: 13, marginTop: 4 }}>Top {getPercentile(wpm)}</div>
+          <div style={{ color: 'var(--text)', fontSize: 36, fontWeight: 500, lineHeight: 1 }}>{ordinal(wpmToRank(wpm))}</div>
+          <div style={{ color: 'var(--sub)', fontSize: 13, marginTop: 4 }}>Top {getPercentile(wpm)}</div>
         </>
       ) : (
-        <div style={{ color: '#646669', fontSize: 28 }}>—</div>
+        <div style={{ color: 'var(--sub)', fontSize: 28 }}>—</div>
       )}
     </div>
   );

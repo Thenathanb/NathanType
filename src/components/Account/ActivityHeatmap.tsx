@@ -5,7 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 
 type Range = '12m' | '6m' | '30d';
 
-// Use color-mix so the heatmap always matches the active theme --main color
 function colorFor(count: number): string {
   if (count === 0) return 'rgba(255,255,255,0.05)';
   if (count <= 2)  return 'color-mix(in srgb, var(--main) 20%, transparent)';
@@ -24,11 +23,16 @@ export function ActivityHeatmap() {
   const [dayCounts, setDayCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState(0);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser) return;
+    setLoading(true);
+    setError('');
     const days = range === '12m' ? 365 : range === '6m' ? 182 : 30;
     const cutoff = Date.now() - days * 86_400_000;
+
     getDocs(query(
       collection(db, 'testResults', currentUser.uid, 'results'),
       where('timestamp', '>=', cutoff),
@@ -41,7 +45,13 @@ export function ActivityHeatmap() {
       });
       setDayCounts(counts);
       setTotal(snap.size);
-    }).catch(console.error);
+    }).catch(err => {
+      console.error('ActivityHeatmap load failed:', err);
+      const msg = (err as { code?: string }).code === 'permission-denied'
+        ? 'permission denied — check your Firestore rules for testResults collection'
+        : `failed to load activity (${(err as Error).message ?? 'unknown error'})`;
+      setError(msg);
+    }).finally(() => setLoading(false));
   }, [currentUser, range]);
 
   const cells = useMemo(() => {
@@ -76,9 +86,10 @@ export function ActivityHeatmap() {
             <option value="6m">last 6 months</option>
             <option value="30d">last 30 days</option>
           </select>
-          <span style={{ color: 'var(--sub)', fontSize: 13 }}>{total} tests</span>
+          <span style={{ color: 'var(--sub)', fontSize: 13 }}>
+            {loading ? 'loading…' : `${total} test${total !== 1 ? 's' : ''}`}
+          </span>
         </div>
-        {/* Legend */}
         <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: 'var(--sub)' }}>
           <span>less</span>
           {LEGEND_STOPS.map((c, i) => (
@@ -88,43 +99,49 @@ export function ActivityHeatmap() {
         </div>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="mb-3 font-mono rounded px-3 py-2" style={{ backgroundColor: 'color-mix(in srgb, var(--error) 10%, transparent)', color: 'var(--error)', fontSize: 12 }}>
+          {error}
+        </div>
+      )}
+
       {/* Grid */}
-      <div className="flex gap-1.5 overflow-x-auto">
-        {/* Day labels */}
-        <div className="flex flex-col gap-0.5 shrink-0">
-          {DAY_LABELS.map((l, i) => (
-            <div key={i} style={{ height: 12, lineHeight: '12px', fontSize: 10, color: 'var(--sub)', width: 28 }}>{l}</div>
+      {!error && (
+        <div className="flex gap-1.5 overflow-x-auto">
+          <div className="flex flex-col gap-0.5 shrink-0">
+            {DAY_LABELS.map((l, i) => (
+              <div key={i} style={{ height: 12, lineHeight: '12px', fontSize: 10, color: 'var(--sub)', width: 28 }}>{l}</div>
+            ))}
+          </div>
+          {cells[0].map((_, wi) => (
+            <div key={wi} className="flex flex-col gap-0.5">
+              {cells.map((row, di) => {
+                const cell = row[wi];
+                if (!cell) return <div key={di} style={{ width: 12, height: 12 }} />;
+                const date = new Date(cell.date + 'T12:00:00');
+                const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                return (
+                  <div
+                    key={di}
+                    style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: colorFor(cell.count), cursor: 'default' }}
+                    onMouseEnter={e => {
+                      const rect = (e.target as HTMLElement).getBoundingClientRect();
+                      setTooltip({ text: `${cell.count} test${cell.count !== 1 ? 's' : ''} on ${label}`, x: rect.left, y: rect.top });
+                    }}
+                    onMouseLeave={() => setTooltip(null)}
+                  />
+                );
+              })}
+            </div>
           ))}
         </div>
-        {/* Weeks */}
-        {cells[0].map((_, wi) => (
-          <div key={wi} className="flex flex-col gap-0.5">
-            {cells.map((row, di) => {
-              const cell = row[wi];
-              if (!cell) return <div key={di} style={{ width: 12, height: 12 }} />;
-              const date = new Date(cell.date + 'T12:00:00');
-              const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-              return (
-                <div
-                  key={di}
-                  style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: colorFor(cell.count), cursor: 'default' }}
-                  onMouseEnter={e => {
-                    const rect = (e.target as HTMLElement).getBoundingClientRect();
-                    setTooltip({ text: `${cell.count} test${cell.count !== 1 ? 's' : ''} on ${label}`, x: rect.left, y: rect.top });
-                  }}
-                  onMouseLeave={() => setTooltip(null)}
-                />
-              );
-            })}
-          </div>
-        ))}
-      </div>
+      )}
 
       <div style={{ color: 'var(--sub)', fontSize: 11, marginTop: 10 }}>
         Note: All activity data is using UTC time.
       </div>
 
-      {/* Tooltip */}
       {tooltip && (
         <div
           className="fixed font-mono rounded px-2 py-1 pointer-events-none"

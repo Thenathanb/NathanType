@@ -7,7 +7,7 @@ import { getCharStates, calculateAllStats, calculateWpm, calculateRawWpm, calcul
 import { generateTestWords, generateWords } from '../utils/wordGenerator';
 import { getPbKey } from '../stores/userStore';
 import { useAuth } from '../context/AuthContext';
-import { saveTestResult } from '../utils/firestoreService';
+import { saveTestResult, incrementTestsStarted } from '../utils/firestoreService';
 import { getActiveFunboxWords } from '../utils/funbox/index';
 import {
   CONTENT_FUNBOXES, MEME_FUNBOXES, MUSIC_FUNBOXES, isContentFunbox,
@@ -565,6 +565,7 @@ export function useTypingTest() {
       clearWpmHistory();
       setTimeRemaining(timeLimit);
       justStarted = true;
+      if (currentUser) incrementTestsStarted(currentUser.uid);
     }
 
     // isActive is the stale closure value — use justStarted to not drop the first character

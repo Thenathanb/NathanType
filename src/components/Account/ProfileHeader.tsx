@@ -3,9 +3,11 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { updateUserProfile } from '../../utils/firestoreService';
 
-function fmt(s: number) {
+function fmtTime(s: number) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+  if (m > 0) return `${m}m ${String(sec).padStart(2, '0')}s`;
+  return `${sec}s`;
 }
 function fmtDate(ts: number) {
   return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -22,6 +24,10 @@ export function ProfileHeader() {
   const displayName = userProfile.username || userProfile.displayName;
   const initials = displayName[0].toUpperCase();
   const xpPct = Math.min(100, (userProfile.xp / userProfile.xpToNextLevel) * 100);
+
+  const testsCompleted = userProfile.totalTests ?? 0;
+  const testsStarted   = userProfile.testsStarted ?? testsCompleted;
+  const timeTyping     = userProfile.totalTimeTyping ?? 0;
 
   const saveName = async () => {
     if (!nameVal.trim()) return;
@@ -46,63 +52,68 @@ export function ProfileHeader() {
         <IconPencil />
       </button>
 
-      <div className="flex items-start gap-5">
+      <div className="flex flex-col md:flex-row items-start gap-5">
         {/* Avatar */}
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-        ) : (
-          <div className="flex items-center justify-center font-mono font-medium shrink-0"
-            style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 28 }}>
-            {initials}
-          </div>
-        )}
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          {editing ? (
-            <div className="flex items-center gap-2 mb-2">
-              <input
-                value={nameVal} onChange={e => setNameVal(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditing(false); }}
-                className="font-mono font-medium outline-none rounded px-2 py-1"
-                style={{ color: 'var(--text)', backgroundColor: 'var(--bg)', border: '1px solid var(--sub)', fontSize: 20, maxWidth: 220 }}
-                autoFocus
-              />
-              <button onClick={saveName} className="font-mono text-sm px-3 py-1 rounded"
-                style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', border: 'none', cursor: 'pointer' }}>
-                save
-              </button>
-              <button onClick={() => setEditing(false)} className="font-mono text-sm"
-                style={{ color: 'var(--sub)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                cancel
-              </button>
-            </div>
+        <div className="flex items-start gap-5 flex-1 min-w-0">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           ) : (
-            <div className="font-mono font-medium mb-1" style={{ color: 'var(--text)', fontSize: 22 }}>{displayName}</div>
-          )}
-          <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>joined {fmtDate(userProfile.createdAt)}</div>
-          <div className="flex items-center gap-1.5 mt-0.5 font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>
-            {userProfile.currentStreak > 0 && <span style={{ color: 'var(--main)' }}>🔥</span>}
-            current streak: {userProfile.currentStreak ?? 0} days
-          </div>
-
-          {/* XP bar */}
-          <div className="mt-3" style={{ maxWidth: 340 }}>
-            <div className="flex justify-between mb-1 font-mono" style={{ fontSize: 12 }}>
-              <span style={{ color: 'var(--main)' }}>level {userProfile.level}</span>
-              <span style={{ color: 'var(--sub)' }}>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
+            <div className="flex items-center justify-center font-mono font-medium shrink-0"
+              style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 28 }}>
+              {initials}
             </div>
-            <div style={{ height: 4, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)', borderRadius: 2 }}>
-              <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 2, transition: 'width 0.5s' }} />
+          )}
+
+          {/* Name + streak + XP */}
+          <div className="flex-1 min-w-0">
+            {editing ? (
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  value={nameVal} onChange={e => setNameVal(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditing(false); }}
+                  className="font-mono font-medium outline-none rounded px-2 py-1"
+                  style={{ color: 'var(--text)', backgroundColor: 'var(--bg)', border: '1px solid var(--sub)', fontSize: 20, maxWidth: 220 }}
+                  autoFocus
+                />
+                <button onClick={saveName} className="font-mono text-sm px-3 py-1 rounded"
+                  style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', border: 'none', cursor: 'pointer' }}>
+                  save
+                </button>
+                <button onClick={() => setEditing(false)} className="font-mono text-sm"
+                  style={{ color: 'var(--sub)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  cancel
+                </button>
+              </div>
+            ) : (
+              <div className="font-mono font-medium mb-1" style={{ color: 'var(--text)', fontSize: 22 }}>{displayName}</div>
+            )}
+            <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>joined {fmtDate(userProfile.createdAt)}</div>
+            {userProfile.currentStreak > 0 && (
+              <div className="flex items-center gap-1 mt-0.5 font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>
+                <span style={{ color: 'var(--main)' }}>🔥</span>
+                <span style={{ color: 'var(--main)' }}>{userProfile.currentStreak}</span>
+                <span>day streak · best: {userProfile.bestStreak ?? 0}</span>
+              </div>
+            )}
+
+            {/* XP bar */}
+            <div className="mt-3" style={{ maxWidth: 300 }}>
+              <div className="flex justify-between mb-1 font-mono" style={{ fontSize: 12 }}>
+                <span style={{ color: 'var(--main)' }}>level {userProfile.level}</span>
+                <span style={{ color: 'var(--sub)' }}>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
+              </div>
+              <div style={{ height: 4, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)', borderRadius: 2 }}>
+                <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 2, transition: 'width 0.5s' }} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Stat columns */}
-        <div className="hidden md:flex items-center gap-8 shrink-0">
-          <StatCol label="tests started"   value={String(userProfile.testsStarted ?? userProfile.totalTests)} />
-          <StatCol label="tests completed" value={String(userProfile.totalTests)} />
-          <StatCol label="time typing"     value={fmt(userProfile.totalTimeTyping)} />
+        {/* Stats row — tests started / completed / time */}
+        <div className="flex gap-6 shrink-0 flex-wrap">
+          <StatCol label="tests started"   value={String(testsStarted)} />
+          <StatCol label="tests completed" value={String(testsCompleted)} />
+          <StatCol label="time typing"     value={fmtTime(timeTyping)} />
         </div>
       </div>
     </div>
@@ -112,8 +123,8 @@ export function ProfileHeader() {
 function StatCol({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-center font-mono">
-      <div style={{ color: 'var(--text)', fontSize: 26, fontWeight: 500 }}>{value}</div>
-      <div style={{ color: 'var(--sub)', fontSize: 11, marginTop: 2 }}>{label}</div>
+      <div style={{ color: 'var(--text)', fontSize: 26, fontWeight: 500, lineHeight: 1 }}>{value}</div>
+      <div style={{ color: 'var(--sub)', fontSize: 11, marginTop: 4 }}>{label}</div>
     </div>
   );
 }
