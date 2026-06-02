@@ -7,7 +7,7 @@ import { getCharStates, calculateAllStats, calculateWpm, calculateRawWpm, calcul
 import { generateTestWords, generateWords } from '../utils/wordGenerator';
 import { getPbKey } from '../stores/userStore';
 import { useAuth } from '../context/AuthContext';
-import { saveTestResult, incrementTestsStarted } from '../utils/firestoreService';
+import { saveTestResult, computeXpResult, incrementTestsStarted } from '../utils/firestoreService';
 import { invalidateTestResultsCache } from './useTestResults';
 import { getActiveFunboxWords } from '../utils/funbox/index';
 import {
@@ -61,7 +61,7 @@ export function useTypingTest() {
   } = useSettingsStore();
 
   const { addTestResult, updateUserStats, checkAndUpdatePersonalBest } = useUserStore();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
 
   const [currentInput, setCurrentInput] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
@@ -469,37 +469,39 @@ export function useTypingTest() {
     addTestResult(result);
     updateUserStats(stats.wpm, stats.accuracy, stats.timeElapsed);
 
-    // Save to Firestore and compute XP if user is signed in
+    // XP: compute locally so the results screen updates immediately,
+    // then persist to Firestore in the background.
     if (currentUser) {
       const modeOption = s.mode === 'time' ? s.timeLimit : s.wordLimit;
-      saveTestResult(
-        currentUser.uid,
-        {
-          wpm: stats.wpm,
-          rawWpm: stats.rawWpm,
-          accuracy: stats.accuracy,
-          consistency: stats.consistency,
-          mode: s.mode,
-          modeOption,
-          language: 'english',
-          punctuation: s.punctuation,
-          numbers: s.numbers,
-          chars: {
-            correct: stats.correctChars,
-            incorrect: stats.incorrectChars,
-            extra: stats.extraChars,
-            missed: stats.missedChars,
-          },
+      const testData = {
+        wpm: stats.wpm,
+        rawWpm: stats.rawWpm,
+        accuracy: stats.accuracy,
+        consistency: stats.consistency,
+        mode: s.mode,
+        modeOption,
+        language: 'english',
+        punctuation: s.punctuation,
+        numbers: s.numbers,
+        chars: {
+          correct: stats.correctChars,
+          incorrect: stats.incorrectChars,
+          extra: stats.extraChars,
+          missed: stats.missedChars,
         },
-        stats.timeElapsed
-      )
-        .then((xpResult) => {
-          useTestStore.getState().setXpResult(xpResult);
-          invalidateTestResultsCache(currentUser.uid);
-        })
+      };
+
+      // Show XP instantly — no Firestore round-trip needed for display
+      const currentTotalXp = userProfile?.xp ?? 0;
+      const xpResult = computeXpResult(currentTotalXp, testData, stats.timeElapsed);
+      useTestStore.getState().setXpResult(xpResult);
+
+      // Persist to Firestore in the background
+      saveTestResult(currentUser.uid, testData, stats.timeElapsed)
+        .then(() => { invalidateTestResultsCache(currentUser.uid); })
         .catch((err) => { console.error('Firestore save failed:', err); });
     }
-  }, [checkAndUpdatePersonalBest, addTestResult, updateUserStats, currentUser]);
+  }, [checkAndUpdatePersonalBest, addTestResult, updateUserStats, currentUser, userProfile]);
 
   // Keep a stable ref so intervals always call the latest version
   const handleTestCompleteRef = useRef(handleTestComplete);

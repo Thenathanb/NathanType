@@ -144,7 +144,7 @@ export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps & 
         {currentUser && xpResult ? (
           <XpSection xpResult={xpResult} />
         ) : currentUser ? (
-          <XpLoading />
+          null
         ) : (
           <p className="text-center font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>
             <button
@@ -232,14 +232,6 @@ function Row({ label, value, color }: { label: string; value: string | number; c
     <div className="flex justify-between font-mono" style={{ fontSize: 13 }}>
       <span style={{ color: 'var(--sub)' }}>{label}</span>
       <span style={{ color: color || 'var(--text)' }}>{value}</span>
-    </div>
-  );
-}
-
-function XpLoading() {
-  return (
-    <div className="font-mono" style={{ maxWidth: 320, margin: '0 auto', textAlign: 'center', color: 'var(--sub)', fontSize: 13, opacity: 0.6, padding: '8px 0', animation: 'fadeIn 0.15s ease-out' }}>
-      calculating xp...
     </div>
   );
 }

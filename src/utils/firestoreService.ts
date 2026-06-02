@@ -35,7 +35,7 @@ function getBestWpmKey(mode: string, modeOption: number): BestWpmKey | null {
  * modifier builds up from mode/options bonuses
  * accuracy penalty: max(0, (acc - 50) / 50)  — below 50% acc earns nothing
  */
-function calcXp(data: TestResultData, timeElapsed: number): import('../types/index.js').XpBreakdown {
+export function calcXp(data: TestResultData, timeElapsed: number): import('../types/index.js').XpBreakdown {
   const rawBase = Math.round(timeElapsed * 2)
 
   // Accuracy modifier scales from 0 (at 50% acc) to 1 (at 100% acc)
@@ -64,6 +64,33 @@ function calcXp(data: TestResultData, timeElapsed: number): import('../types/ind
   const modeBonus    = Math.max(0, total - base - accuracyBonus)
 
   return { base, accuracyBonus, streakBonus: 0, modeBonus, total }
+}
+
+/**
+ * Compute the full XpResult locally — no Firestore needed.
+ * Call this immediately when the test ends so the UI updates instantly.
+ */
+export function computeXpResult(
+  currentTotalXp: number,
+  data: TestResultData,
+  timeElapsed: number,
+): XpResult {
+  const breakdown = calcXp(data, timeElapsed)
+  const xpGained  = breakdown.total
+  const newTotal   = currentTotalXp + xpGained
+  const prevLevel  = getLevelFromTotalXp(currentTotalXp)
+  const newLevel   = getLevelFromTotalXp(newTotal)
+  const xpInLevel  = Math.max(0, newTotal - getTotalXpToReachLevel(newLevel))
+  const levelMaxXp = getLevelMaxXp(newLevel)
+  return {
+    xpGained,
+    xpBreakdown: breakdown,
+    didLevelUp: newLevel > prevLevel,
+    prevLevel,
+    newLevel,
+    newXp: xpInLevel,
+    newXpToNextLevel: levelMaxXp,
+  }
 }
 
 export async function saveTestResult(
