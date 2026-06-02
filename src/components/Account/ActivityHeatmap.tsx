@@ -5,24 +5,17 @@ import { useAuth } from '../../context/AuthContext';
 
 type Range = '12m' | '6m' | '30d';
 
-const COLORS = [
-  'rgba(255,255,255,0.05)',
-  'rgba(226,183,20,0.2)',
-  'rgba(226,183,20,0.45)',
-  'rgba(226,183,20,0.7)',
-  '#e2b714',
-];
-
-function colorFor(count: number) {
-  if (count === 0) return COLORS[0];
-  if (count <= 2)  return COLORS[1];
-  if (count <= 5)  return COLORS[2];
-  if (count <= 9)  return COLORS[3];
-  return COLORS[4];
+// Use color-mix so the heatmap always matches the active theme --main color
+function colorFor(count: number): string {
+  if (count === 0) return 'rgba(255,255,255,0.05)';
+  if (count <= 2)  return 'color-mix(in srgb, var(--main) 20%, transparent)';
+  if (count <= 5)  return 'color-mix(in srgb, var(--main) 45%, transparent)';
+  if (count <= 9)  return 'color-mix(in srgb, var(--main) 70%, transparent)';
+  return 'var(--main)';
 }
 
 function toDateKey(ts: number) {
-  return new Date(ts).toISOString().slice(0, 10); // YYYY-MM-DD
+  return new Date(ts).toISOString().slice(0, 10);
 }
 
 export function ActivityHeatmap() {
@@ -51,12 +44,10 @@ export function ActivityHeatmap() {
     }).catch(console.error);
   }, [currentUser, range]);
 
-  // Build grid: weeks × days (Sun=0 … Sat=6)
   const cells = useMemo(() => {
     const days = range === '12m' ? 365 : range === '6m' ? 182 : 30;
     const end = new Date(); end.setHours(23, 59, 59, 999);
     const start = new Date(end.getTime() - days * 86_400_000);
-    // Align start to the beginning of its week (Sunday)
     const startDay = new Date(start); startDay.setDate(start.getDate() - start.getDay());
     const rows: { date: string; count: number }[][] = Array.from({ length: 7 }, () => []);
     const cursor = new Date(startDay);
@@ -69,28 +60,29 @@ export function ActivityHeatmap() {
   }, [dayCounts, range]);
 
   const DAY_LABELS = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+  const LEGEND_STOPS = [0, 1, 3, 6, 10];
 
   return (
-    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: '#323437', position: 'relative' }}>
+    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: 'var(--bg2)', position: 'relative' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <select
             value={range} onChange={e => setRange(e.target.value as Range)}
             className="font-mono outline-none rounded px-2 py-1"
-            style={{ backgroundColor: '#2c2e31', color: '#d1d0ce', border: '1px solid #3a3c3f', fontSize: 12, cursor: 'pointer' }}
+            style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--sub) 40%, transparent)', fontSize: 12, cursor: 'pointer' }}
           >
             <option value="12m">last 12 months</option>
             <option value="6m">last 6 months</option>
             <option value="30d">last 30 days</option>
           </select>
-          <span style={{ color: '#646669', fontSize: 13 }}>{total} tests</span>
+          <span style={{ color: 'var(--sub)', fontSize: 13 }}>{total} tests</span>
         </div>
         {/* Legend */}
-        <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: '#646669' }}>
+        <div className="flex items-center gap-1.5" style={{ fontSize: 11, color: 'var(--sub)' }}>
           <span>less</span>
-          {COLORS.map((c, i) => (
-            <div key={i} style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: c }} />
+          {LEGEND_STOPS.map((c, i) => (
+            <div key={i} style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: colorFor(c) }} />
           ))}
           <span>more</span>
         </div>
@@ -99,9 +91,9 @@ export function ActivityHeatmap() {
       {/* Grid */}
       <div className="flex gap-1.5 overflow-x-auto">
         {/* Day labels */}
-        <div className="flex flex-col gap-0.5 shrink-0" style={{ paddingTop: 0 }}>
+        <div className="flex flex-col gap-0.5 shrink-0">
           {DAY_LABELS.map((l, i) => (
-            <div key={i} style={{ height: 12, lineHeight: '12px', fontSize: 10, color: '#646669', width: 28 }}>{l}</div>
+            <div key={i} style={{ height: 12, lineHeight: '12px', fontSize: 10, color: 'var(--sub)', width: 28 }}>{l}</div>
           ))}
         </div>
         {/* Weeks */}
@@ -128,7 +120,7 @@ export function ActivityHeatmap() {
         ))}
       </div>
 
-      <div style={{ color: '#646669', fontSize: 11, marginTop: 10 }}>
+      <div style={{ color: 'var(--sub)', fontSize: 11, marginTop: 10 }}>
         Note: All activity data is using UTC time.
       </div>
 
@@ -136,7 +128,7 @@ export function ActivityHeatmap() {
       {tooltip && (
         <div
           className="fixed font-mono rounded px-2 py-1 pointer-events-none"
-          style={{ left: tooltip.x, top: tooltip.y - 28, backgroundColor: '#2c2e31', color: '#d1d0ce', fontSize: 12, zIndex: 9999, border: '0.5px solid rgba(255,255,255,0.1)' }}
+          style={{ left: tooltip.x, top: tooltip.y - 28, backgroundColor: 'var(--bg)', color: 'var(--text)', fontSize: 12, zIndex: 9999, border: '0.5px solid rgba(255,255,255,0.1)' }}
         >
           {tooltip.text}
         </div>

@@ -54,19 +54,19 @@ export function AddFriendInput() {
           onKeyDown={e => e.key === 'Enter' && handleSend()}
           placeholder="enter username"
           className="font-mono outline-none rounded-lg"
-          style={{ backgroundColor: '#2c2e31', color: '#d1d0ce', border: '1px solid #3a3c3f', padding: '8px 14px', fontSize: 13, width: 220 }}
+          style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--sub) 40%, transparent)', padding: '8px 14px', fontSize: 13, width: 220 }}
           autoFocus
         />
         <button
           onClick={handleSend}
           disabled={loading || !input.trim()}
           className="font-mono rounded-lg transition-opacity hover:opacity-80"
-          style={{ backgroundColor: '#e2b714', color: '#2c2e31', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: 13 }}
+          style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: 13 }}
         >
           {loading ? '…' : 'send'}
         </button>
       </div>
-      {error && <p style={{ color: '#ca4754', fontSize: 12, marginTop: 6 }}>{error}</p>}
+      {error && <p style={{ color: 'var(--error)', fontSize: 12, marginTop: 6 }}>{error}</p>}
     </div>
   );
 }

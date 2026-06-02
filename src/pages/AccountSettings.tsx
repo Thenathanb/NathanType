@@ -9,14 +9,14 @@ import { useNavigate } from 'react-router-dom';
 import { ThemeSelector } from '../components/Settings/ThemeSelector';
 import { FontSelector } from '../components/Settings/FontSelector';
 
-// ── Shared card ───────────────────────────────────────────────────
+// ── Shared primitives ────────────────────────────────────────────
 function Card({ title, children, danger }: { title: string; children: React.ReactNode; danger?: boolean }) {
   return (
     <div className="rounded-xl p-6 font-mono" style={{
-      backgroundColor: '#323437',
-      border: danger ? '0.5px solid rgba(202,71,84,0.3)' : 'none',
+      backgroundColor: 'var(--bg2)',
+      border: danger ? '0.5px solid color-mix(in srgb, var(--error) 30%, transparent)' : 'none',
     }}>
-      <h2 className="mb-5 font-medium" style={{ color: '#646669', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+      <h2 className="mb-5 font-medium uppercase tracking-widest" style={{ color: 'var(--sub)', fontSize: 11 }}>
         {title}
       </h2>
       {children}
@@ -27,7 +27,7 @@ function Card({ title, children, danger }: { title: string; children: React.Reac
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2 mb-5">
-      <label style={{ color: '#646669', fontSize: 13 }}>{label}</label>
+      <label style={{ color: 'var(--sub)', fontSize: 13 }}>{label}</label>
       {children}
     </div>
   );
@@ -39,7 +39,7 @@ function Inp({ value, onChange, type = 'text', placeholder }: { value: string; o
       type={type} value={value} onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className="font-mono outline-none rounded-lg"
-      style={{ backgroundColor: '#2c2e31', color: '#d1d0ce', border: '1px solid #3a3c3f', padding: '9px 14px', fontSize: 13, maxWidth: 360, width: '100%' }}
+      style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--sub) 40%, transparent)', padding: '9px 14px', fontSize: 13, maxWidth: 360, width: '100%' }}
     />
   );
 }
@@ -48,13 +48,13 @@ function SaveBtn({ onClick, loading, label = 'save' }: { onClick: () => void; lo
   return (
     <button onClick={onClick} disabled={loading}
       className="font-mono rounded-lg transition-opacity hover:opacity-80"
-      style={{ backgroundColor: '#e2b714', color: '#2c2e31', border: 'none', padding: '9px 20px', fontSize: 13, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
+      style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', border: 'none', padding: '9px 20px', fontSize: 13, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
       {loading ? 'saving…' : label}
     </button>
   );
 }
 
-// ── 1. Profile section ───────────────────────────────────────────
+// ── 1. Profile ────────────────────────────────────────────────────
 function ProfileSection() {
   const { currentUser, userProfile } = useAuth();
   const [name, setName]   = useState(userProfile?.displayName ?? '');
@@ -82,7 +82,7 @@ function ProfileSection() {
   );
 }
 
-// ── 2. Preferences section ───────────────────────────────────────
+// ── 2. Preferences ────────────────────────────────────────────────
 function PreferencesSection() {
   const { currentUser, userProfile } = useAuth();
   const prefs = userProfile?.preferences ?? { defaultMode: 'time', defaultTimeLimit: 30, defaultWordLimit: 25, streakHourOffset: 0 };
@@ -105,7 +105,7 @@ function PreferencesSection() {
 
   const Sel = ({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) => (
     <select value={value} onChange={e => onChange(e.target.value)} className="font-mono outline-none rounded-lg"
-      style={{ backgroundColor: '#2c2e31', color: '#d1d0ce', border: '1px solid #3a3c3f', padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}>
+      style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--sub) 40%, transparent)', padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   );
@@ -120,7 +120,7 @@ function PreferencesSection() {
   );
 }
 
-// ── 3. Streak section ────────────────────────────────────────────
+// ── 3. Streak ────────────────────────────────────────────────────
 function StreakSection() {
   const { currentUser, userProfile } = useAuth();
   const [offset, setOffset] = useState(String(userProfile?.preferences?.streakHourOffset ?? 0));
@@ -140,26 +140,26 @@ function StreakSection() {
 
   return (
     <Card title="streak">
-      <p style={{ color: '#646669', fontSize: 13, marginBottom: 16 }}>
+      <p style={{ color: 'var(--sub)', fontSize: 13, marginBottom: 16 }}>
         Streak resets at midnight UTC. Adjust by your timezone offset.
       </p>
       <Row label="hour offset (-12 to +12)">
         <input
           type="number" min={-12} max={12} value={offset} onChange={e => setOffset(e.target.value)}
           className="font-mono outline-none rounded-lg"
-          style={{ backgroundColor: '#2c2e31', color: '#d1d0ce', border: '1px solid #3a3c3f', padding: '9px 14px', fontSize: 13, width: 100 }}
+          style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--sub) 40%, transparent)', padding: '9px 14px', fontSize: 13, width: 100 }}
         />
       </Row>
-      <div style={{ color: '#646669', fontSize: 13, marginBottom: 16 }}>
-        Current streak: <span style={{ color: '#e2b714' }}>{userProfile?.currentStreak ?? 0} days</span>
-        {' · '}Best: <span style={{ color: '#d1d0ce' }}>{userProfile?.bestStreak ?? 0} days</span>
+      <div style={{ color: 'var(--sub)', fontSize: 13, marginBottom: 16 }}>
+        Current streak: <span style={{ color: 'var(--main)' }}>{userProfile?.currentStreak ?? 0} days</span>
+        {' · '}Best: <span style={{ color: 'var(--text)' }}>{userProfile?.bestStreak ?? 0} days</span>
       </div>
       <SaveBtn onClick={save} loading={saving} />
     </Card>
   );
 }
 
-// ── 4. Danger zone ───────────────────────────────────────────────
+// ── 4. Danger zone ────────────────────────────────────────────────
 function DangerZone() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -169,8 +169,8 @@ function DangerZone() {
   const DangerBtn = ({ label, onClick }: { label: string; onClick: () => void }) => (
     <button onClick={onClick}
       className="font-mono rounded-lg transition-colors"
-      style={{ backgroundColor: 'transparent', color: '#ca4754', border: '0.5px solid #ca4754', padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(202,71,84,0.1)')}
+      style={{ backgroundColor: 'transparent', color: 'var(--error)', border: '0.5px solid var(--error)', padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--error) 10%, transparent)')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
       {label}
     </button>
@@ -227,50 +227,44 @@ function DangerZone() {
   return (
     <Card title="danger zone" danger>
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div style={{ color: '#d1d0ce', fontSize: 14 }}>reset personal bests</div>
-            <div style={{ color: '#646669', fontSize: 12 }}>clears all your PB records</div>
+        {[
+          { key: 'resetPbs' as const,     label: 'reset personal bests', desc: 'clears all your PB records',                   btn: 'reset pbs' },
+          { key: 'resetAccount' as const, label: 'reset account',         desc: 'zeros all stats, keeps your account',          btn: 'reset account' },
+          { key: 'delete' as const,       label: 'delete account',        desc: 'permanently removes your account and data',    btn: 'delete account' },
+        ].map(item => (
+          <div key={item.key} className="flex items-center justify-between">
+            <div>
+              <div style={{ color: 'var(--text)', fontSize: 14 }}>{item.label}</div>
+              <div style={{ color: 'var(--sub)', fontSize: 12 }}>{item.desc}</div>
+            </div>
+            <DangerBtn label={item.btn} onClick={() => setConfirm(item.key)} />
           </div>
-          <DangerBtn label="reset pbs" onClick={() => setConfirm('resetPbs')} />
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <div style={{ color: '#d1d0ce', fontSize: 14 }}>reset account</div>
-            <div style={{ color: '#646669', fontSize: 12 }}>zeros all stats, keeps your account</div>
-          </div>
-          <DangerBtn label="reset account" onClick={() => setConfirm('resetAccount')} />
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <div style={{ color: '#d1d0ce', fontSize: 14 }}>delete account</div>
-            <div style={{ color: '#646669', fontSize: 12 }}>permanently removes your account and data</div>
-          </div>
-          <DangerBtn label="delete account" onClick={() => setConfirm('delete')} />
-        </div>
+        ))}
       </div>
 
       {/* Confirmation modal */}
       {confirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+        <div className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
           onClick={() => !loading && setConfirm(null)}>
-          <div className="rounded-xl p-6 font-mono" style={{ backgroundColor: '#323437', maxWidth: 360, width: '90%', border: '0.5px solid rgba(202,71,84,0.4)' }}
+          <div className="rounded-xl p-6 font-mono"
+            style={{ backgroundColor: 'var(--bg2)', maxWidth: 360, width: '90%', border: '0.5px solid color-mix(in srgb, var(--error) 40%, transparent)' }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ color: '#d1d0ce', fontSize: 15, marginBottom: 8 }}>are you sure?</div>
-            <div style={{ color: '#646669', fontSize: 13, marginBottom: 20 }}>
+            <div style={{ color: 'var(--text)', fontSize: 15, marginBottom: 8 }}>are you sure?</div>
+            <div style={{ color: 'var(--sub)', fontSize: 13, marginBottom: 20 }}>
               {confirm === 'delete' ? 'this permanently deletes your account and cannot be undone.' : 'this action cannot be undone.'}
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => { if (confirm === 'resetPbs') resetPbs(); else if (confirm === 'resetAccount') resetAccount(); else deleteAccount(); }}
                 disabled={loading}
-                className="font-mono rounded-lg transition-colors"
-                style={{ backgroundColor: '#ca4754', color: '#fff', border: 'none', padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}>
+                className="font-mono rounded-lg"
+                style={{ backgroundColor: 'var(--error)', color: '#fff', border: 'none', padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}>
                 {loading ? '…' : 'confirm'}
               </button>
               <button onClick={() => setConfirm(null)} disabled={loading}
                 className="font-mono rounded-lg"
-                style={{ backgroundColor: 'transparent', color: '#646669', border: '0.5px solid #646669', padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}>
+                style={{ backgroundColor: 'transparent', color: 'var(--sub)', border: '0.5px solid var(--sub)', padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}>
                 cancel
               </button>
             </div>
@@ -281,22 +275,20 @@ function DangerZone() {
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────
 export function AccountSettings() {
   return (
     <div className="page-scroll">
       <div className="w-full max-w-4xl mx-auto px-5 py-8 flex flex-col gap-4 font-mono" style={{ animation: 'fadeIn 0.2s ease-out' }}>
         <h1 style={{ color: 'var(--main)', fontSize: 26, fontWeight: 500, marginBottom: 8 }}>account settings</h1>
 
-        {/* Theme */}
         <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--bg2)' }}>
-          <h2 className="mb-4 uppercase tracking-wider" style={{ color: 'var(--sub)', fontSize: 11 }}>theme</h2>
+          <h2 className="mb-4 uppercase tracking-widest" style={{ color: 'var(--sub)', fontSize: 11 }}>theme</h2>
           <ThemeSelector />
         </div>
 
-        {/* Font */}
         <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--bg2)' }}>
-          <h2 className="mb-4 uppercase tracking-wider" style={{ color: 'var(--sub)', fontSize: 11 }}>font</h2>
+          <h2 className="mb-4 uppercase tracking-widest" style={{ color: 'var(--sub)', fontSize: 11 }}>font</h2>
           <FontSelector />
         </div>
 

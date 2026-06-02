@@ -33,14 +33,14 @@ export function ProfileHeader() {
   };
 
   return (
-    <div className="rounded-xl p-6 relative" style={{ backgroundColor: '#323437' }}>
+    <div className="rounded-xl p-6 relative" style={{ backgroundColor: 'var(--bg2)' }}>
       {/* Edit button */}
       <button
         onClick={() => { setEditing(!editing); setNameVal(userProfile.displayName); }}
         className="absolute top-4 right-4 p-1.5 rounded transition-colors"
-        style={{ color: '#646669', background: 'none', border: 'none', cursor: 'pointer' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#d1d0ce')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#646669')}
+        style={{ color: 'var(--sub)', background: 'none', border: 'none', cursor: 'pointer' }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--sub)')}
         title="Edit display name"
       >
         <IconPencil />
@@ -52,7 +52,7 @@ export function ProfileHeader() {
           <img src={avatarUrl} alt="avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
         ) : (
           <div className="flex items-center justify-center font-mono font-medium shrink-0"
-            style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: '#e2b714', color: '#2c2e31', fontSize: 28 }}>
+            style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 28 }}>
             {initials}
           </div>
         )}
@@ -65,35 +65,35 @@ export function ProfileHeader() {
                 value={nameVal} onChange={e => setNameVal(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditing(false); }}
                 className="font-mono font-medium outline-none rounded px-2 py-1"
-                style={{ color: '#d1d0ce', backgroundColor: '#2c2e31', border: '1px solid #646669', fontSize: 20, maxWidth: 220 }}
+                style={{ color: 'var(--text)', backgroundColor: 'var(--bg)', border: '1px solid var(--sub)', fontSize: 20, maxWidth: 220 }}
                 autoFocus
               />
               <button onClick={saveName} className="font-mono text-sm px-3 py-1 rounded"
-                style={{ backgroundColor: '#e2b714', color: '#2c2e31', border: 'none', cursor: 'pointer' }}>
+                style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', border: 'none', cursor: 'pointer' }}>
                 save
               </button>
               <button onClick={() => setEditing(false)} className="font-mono text-sm"
-                style={{ color: '#646669', background: 'none', border: 'none', cursor: 'pointer' }}>
+                style={{ color: 'var(--sub)', background: 'none', border: 'none', cursor: 'pointer' }}>
                 cancel
               </button>
             </div>
           ) : (
-            <div className="font-mono font-medium mb-1" style={{ color: '#d1d0ce', fontSize: 22 }}>{displayName}</div>
+            <div className="font-mono font-medium mb-1" style={{ color: 'var(--text)', fontSize: 22 }}>{displayName}</div>
           )}
-          <div className="font-mono" style={{ color: '#646669', fontSize: 13 }}>joined {fmtDate(userProfile.createdAt)}</div>
-          <div className="flex items-center gap-1.5 mt-0.5 font-mono" style={{ color: '#646669', fontSize: 13 }}>
-            {userProfile.currentStreak > 0 && <span style={{ color: '#e2b714' }}>🔥</span>}
+          <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>joined {fmtDate(userProfile.createdAt)}</div>
+          <div className="flex items-center gap-1.5 mt-0.5 font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>
+            {userProfile.currentStreak > 0 && <span style={{ color: 'var(--main)' }}>🔥</span>}
             current streak: {userProfile.currentStreak ?? 0} days
           </div>
 
           {/* XP bar */}
           <div className="mt-3" style={{ maxWidth: 340 }}>
             <div className="flex justify-between mb-1 font-mono" style={{ fontSize: 12 }}>
-              <span style={{ color: '#e2b714' }}>level {userProfile.level}</span>
-              <span style={{ color: '#646669' }}>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
+              <span style={{ color: 'var(--main)' }}>level {userProfile.level}</span>
+              <span style={{ color: 'var(--sub)' }}>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
             </div>
-            <div style={{ height: 4, backgroundColor: 'rgba(100,102,105,0.3)', borderRadius: 2 }}>
-              <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: '#e2b714', borderRadius: 2, transition: 'width 0.5s' }} />
+            <div style={{ height: 4, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)', borderRadius: 2 }}>
+              <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 2, transition: 'width 0.5s' }} />
             </div>
           </div>
         </div>
@@ -112,8 +112,8 @@ export function ProfileHeader() {
 function StatCol({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-center font-mono">
-      <div style={{ color: '#d1d0ce', fontSize: 26, fontWeight: 500 }}>{value}</div>
-      <div style={{ color: '#646669', fontSize: 11, marginTop: 2 }}>{label}</div>
+      <div style={{ color: 'var(--text)', fontSize: 26, fontWeight: 500 }}>{value}</div>
+      <div style={{ color: 'var(--sub)', fontSize: 11, marginTop: 2 }}>{label}</div>
     </div>
   );
 }

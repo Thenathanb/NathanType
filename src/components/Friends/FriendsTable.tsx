@@ -56,8 +56,12 @@ export function FriendsTable() {
   };
 
   const sorted = [...rows].sort((a, b) => {
+    if (sortKey === 'name') {
+      const an = a.profile.username || a.profile.displayName;
+      const bn = b.profile.username || b.profile.displayName;
+      return sortDir === 'asc' ? an.localeCompare(bn) : bn.localeCompare(an);
+    }
     let av = 0, bv = 0;
-    if (sortKey === 'name')   { return sortDir === 'asc' ? (a.profile.username || a.profile.displayName).localeCompare(b.profile.username || b.profile.displayName) : (b.profile.username || b.profile.displayName).localeCompare(a.profile.username || a.profile.displayName); }
     if (sortKey === 'level')  { av = a.profile.level;              bv = b.profile.level; }
     if (sortKey === 'tests')  { av = a.profile.totalTests;         bv = b.profile.totalTests; }
     if (sortKey === 'time')   { av = a.profile.totalTimeTyping;    bv = b.profile.totalTimeTyping; }
@@ -69,7 +73,7 @@ export function FriendsTable() {
 
   const SH = ({ k, label }: { k: SortKey; label: string }) => (
     <th onClick={() => handleSort(k)} className="text-left py-2 uppercase tracking-wider select-none"
-      style={{ color: sortKey === k ? '#e2b714' : '#646669', fontSize: 11, fontWeight: 400, cursor: 'pointer', paddingRight: 16, borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>
+      style={{ color: sortKey === k ? 'var(--main)' : 'var(--sub)', fontSize: 11, fontWeight: 400, cursor: 'pointer', paddingRight: 16, borderBottom: '0.5px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>
       {label}{sortKey === k ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
     </th>
   );
@@ -83,9 +87,9 @@ export function FriendsTable() {
     } catch { toast.error('failed to remove friend'); }
   };
 
-  if (loading) return <div className="font-mono" style={{ color: '#646669', fontSize: 13 }}>loading friends…</div>;
+  if (loading) return <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>loading friends…</div>;
   if (!rows.length && !userProfile?.friends?.length) return (
-    <div className="font-mono text-center py-12" style={{ color: '#646669', fontSize: 14 }}>no friends yet — add some above</div>
+    <div className="font-mono text-center py-12" style={{ color: 'var(--sub)', fontSize: 14 }}>no friends yet — add some above</div>
   );
 
   const ownProfile = userProfile!;
@@ -97,7 +101,10 @@ export function FriendsTable() {
         <thead>
           <tr>
             <SH k="name"   label="name *" />
-            <th className="text-left py-2 uppercase tracking-wider" style={{ color: '#646669', fontSize: 11, fontWeight: 400, paddingRight: 16, borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>friends for</th>
+            <th className="text-left py-2 uppercase tracking-wider"
+              style={{ color: 'var(--sub)', fontSize: 11, fontWeight: 400, paddingRight: 16, borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
+              friends for
+            </th>
             <SH k="level"  label="level" />
             <SH k="tests"  label="tests" />
             <SH k="time"   label="time typing" />
@@ -119,39 +126,41 @@ export function FriendsTable() {
                     {f.profile.photoURL ? (
                       <img src={f.profile.photoURL} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
-                      <div className="flex items-center justify-center font-mono font-medium" style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#e2b714', color: '#2c2e31', fontSize: 11 }}>{init}</div>
+                      <div className="flex items-center justify-center font-mono font-medium"
+                        style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 11 }}>
+                        {init}
+                      </div>
                     )}
                     <button onClick={() => navigate(`/profile/${f.profile.username || f.uid}`)}
-                      style={{ color: '#d1d0ce', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#e2b714')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#d1d0ce')}>
+                      style={{ color: 'var(--text)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--main)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text)')}>
                       {name}
                     </button>
                   </div>
                 </td>
-                <td style={{ color: '#646669', paddingRight: 16 }}>{ago(f.since)}</td>
-                <td style={{ color: '#d1d0ce', paddingRight: 16 }}>{f.profile.level}</td>
-                <td style={{ color: '#646669', paddingRight: 16 }}>{f.profile.totalTests}/{f.profile.testsStarted ?? f.profile.totalTests}</td>
-                <td style={{ color: '#646669', paddingRight: 16 }}>{fmt(f.profile.totalTimeTyping)}</td>
+                <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{ago(f.since)}</td>
+                <td style={{ color: 'var(--text)', paddingRight: 16 }}>{f.profile.level}</td>
+                <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{f.profile.totalTests}/{f.profile.testsStarted ?? f.profile.totalTests}</td>
+                <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{fmt(f.profile.totalTimeTyping)}</td>
                 <td style={{ paddingRight: 16 }}>
                   {(f.profile.currentStreak ?? 0) > 0
-                    ? <span><span style={{ color: '#e2b714' }}>🔥</span> <span style={{ color: '#d1d0ce' }}>{f.profile.currentStreak}</span></span>
-                    : <span style={{ color: '#646669' }}>—</span>}
+                    ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--text)' }}>{f.profile.currentStreak}</span></span>
+                    : <span style={{ color: 'var(--sub)' }}>—</span>}
                 </td>
-                <td style={{ paddingRight: 16 }}>
-                  <div style={{ color: '#d1d0ce' }}>{f.profile.bestWpm.time15 || '—'}</div>
-                </td>
-                <td style={{ paddingRight: 16 }}>
-                  <div style={{ color: '#d1d0ce' }}>{f.profile.bestWpm.time60 || '—'}</div>
-                </td>
+                <td style={{ color: 'var(--text)', paddingRight: 16 }}>{f.profile.bestWpm.time15 || '—'}</td>
+                <td style={{ color: 'var(--text)', paddingRight: 16 }}>{f.profile.bestWpm.time60 || '—'}</td>
                 <td>
                   {hoverUid === f.uid && (
                     <button onClick={() => remove(f.uid, name)} title="remove friend"
-                      className="transition-opacity hover:opacity-80"
-                      style={{ color: '#646669', background: 'none', border: 'none', cursor: 'pointer' }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#ca4754')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#646669')}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="17" y1="8" x2="23" y2="14" /><line x1="23" y1="8" x2="17" y2="14" /></svg>
+                      style={{ color: 'var(--sub)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--error)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--sub)')}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <line x1="17" y1="8" x2="23" y2="14" /><line x1="23" y1="8" x2="17" y2="14" />
+                      </svg>
                     </button>
                   )}
                 </td>
@@ -160,33 +169,36 @@ export function FriendsTable() {
           })}
 
           {/* Own row */}
-          <tr style={{ height: 44, backgroundColor: 'rgba(226,183,20,0.05)', borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
+          <tr style={{ height: 44, backgroundColor: 'color-mix(in srgb, var(--main) 5%, transparent)', borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
             <td style={{ paddingRight: 16 }}>
               <div className="flex items-center gap-2">
                 {ownProfile.photoURL ? (
                   <img src={ownProfile.photoURL} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
                 ) : (
-                  <div className="flex items-center justify-center font-mono font-medium" style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#e2b714', color: '#2c2e31', fontSize: 11 }}>{ownName[0].toUpperCase()}</div>
+                  <div className="flex items-center justify-center font-mono font-medium"
+                    style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 11 }}>
+                    {ownName[0].toUpperCase()}
+                  </div>
                 )}
-                <span style={{ color: '#e2b714', fontSize: 13 }}>{ownName}</span>
+                <span style={{ color: 'var(--main)', fontSize: 13 }}>{ownName}</span>
               </div>
             </td>
-            <td style={{ color: '#646669', paddingRight: 16 }}>—</td>
-            <td style={{ color: '#e2b714', paddingRight: 16 }}>{ownProfile.level}</td>
-            <td style={{ color: '#e2b714', paddingRight: 16 }}>{ownProfile.totalTests}/{ownProfile.testsStarted ?? ownProfile.totalTests}</td>
-            <td style={{ color: '#e2b714', paddingRight: 16 }}>{fmt(ownProfile.totalTimeTyping)}</td>
+            <td style={{ color: 'var(--sub)', paddingRight: 16 }}>—</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.level}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.totalTests}/{ownProfile.testsStarted ?? ownProfile.totalTests}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{fmt(ownProfile.totalTimeTyping)}</td>
             <td style={{ paddingRight: 16 }}>
               {(ownProfile.currentStreak ?? 0) > 0
-                ? <span><span style={{ color: '#e2b714' }}>🔥</span> <span style={{ color: '#e2b714' }}>{ownProfile.currentStreak}</span></span>
-                : <span style={{ color: '#646669' }}>—</span>}
+                ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--main)' }}>{ownProfile.currentStreak}</span></span>
+                : <span style={{ color: 'var(--sub)' }}>—</span>}
             </td>
-            <td style={{ color: '#e2b714', paddingRight: 16 }}>{ownProfile.bestWpm.time15 || '—'}</td>
-            <td style={{ color: '#e2b714', paddingRight: 16 }}>{ownProfile.bestWpm.time60 || '—'}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.bestWpm.time15 || '—'}</td>
+            <td style={{ color: 'var(--main)', paddingRight: 16 }}>{ownProfile.bestWpm.time60 || '—'}</td>
             <td />
           </tr>
         </tbody>
       </table>
-      <p className="font-mono mt-3" style={{ color: '#646669', fontSize: 11 }}>* click a name to view their public profile</p>
+      <p className="font-mono mt-3" style={{ color: 'var(--sub)', fontSize: 11 }}>* click a name to view their public profile</p>
     </div>
   );
 }

@@ -46,19 +46,19 @@ export function FriendRequestBanner() {
     <div className="flex flex-col gap-2 mb-4">
       {requests.map(req => (
         <div key={req.fromUid} className="flex items-center justify-between rounded-xl px-4 py-3 font-mono"
-          style={{ backgroundColor: '#323437', border: '0.5px solid rgba(226,183,20,0.2)' }}>
-          <span style={{ color: '#d1d0ce', fontSize: 13 }}>
-            <span style={{ color: '#e2b714' }}>{req.fromUsername}</span> wants to be friends
+          style={{ backgroundColor: 'var(--bg2)', border: '0.5px solid color-mix(in srgb, var(--main) 20%, transparent)' }}>
+          <span style={{ color: 'var(--text)', fontSize: 13 }}>
+            <span style={{ color: 'var(--main)' }}>{req.fromUsername}</span> wants to be friends
           </span>
           <div className="flex gap-2">
             <button onClick={() => accept(req)}
               className="rounded px-3 py-1 font-mono text-sm transition-opacity hover:opacity-80"
-              style={{ backgroundColor: '#e2b714', color: '#2c2e31', border: 'none', cursor: 'pointer', fontSize: 12 }}>
+              style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', border: 'none', cursor: 'pointer', fontSize: 12 }}>
               accept
             </button>
             <button onClick={() => decline(req)}
               className="rounded px-3 py-1 font-mono text-sm transition-opacity hover:opacity-80"
-              style={{ backgroundColor: 'transparent', color: '#646669', border: '0.5px solid #646669', cursor: 'pointer', fontSize: 12 }}>
+              style={{ backgroundColor: 'transparent', color: 'var(--sub)', border: '0.5px solid var(--sub)', cursor: 'pointer', fontSize: 12 }}>
               decline
             </button>
           </div>

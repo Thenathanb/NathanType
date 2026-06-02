@@ -31,7 +31,7 @@ export function ResultFilters({ open, onToggle, timeRange, onTimeRange, modeFilt
       <button
         onClick={onToggle}
         className="flex items-center gap-1.5 mb-3 transition-opacity hover:opacity-70"
-        style={{ color: '#e2b714', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}
+        style={{ color: 'var(--main)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}
       >
         <span style={{ transition: 'transform 150ms', transform: open ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
         filters
@@ -67,15 +67,15 @@ function FilterPill({ active, onClick, children }: { active: boolean; onClick: (
       onClick={onClick}
       className="font-mono rounded transition-colors"
       style={{
-        backgroundColor: active ? '#e2b714' : '#2c2e31',
-        color: active ? '#2c2e31' : '#646669',
+        backgroundColor: active ? 'var(--main)' : 'var(--bg)',
+        color: active ? 'var(--bg)' : 'var(--sub)',
         border: 'none',
         cursor: 'pointer',
         padding: '8px 18px',
         fontSize: 13,
       }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#d1d0ce'; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#646669'; }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text)'; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--sub)'; }}
     >
       {children}
     </button>

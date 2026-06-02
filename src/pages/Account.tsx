@@ -28,7 +28,7 @@ export function Account() {
         <ActivityHeatmap />
 
         {/* Results section */}
-        <div className="rounded-xl p-5" style={{ backgroundColor: '#323437' }}>
+        <div className="rounded-xl p-5" style={{ backgroundColor: 'var(--bg2)' }}>
           <ResultFilters
             open={filtersOpen}
             onToggle={() => setFiltersOpen(v => !v)}

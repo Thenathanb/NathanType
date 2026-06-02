@@ -38,17 +38,17 @@ function PbCard({
   bestWpm: UserProfile['bestWpm'];
 }) {
   return (
-    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: '#323437' }}>
+    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: 'var(--bg2)' }}>
       <div className="flex items-center justify-between mb-4">
-        <span style={{ color: '#646669', fontSize: 13 }}>{title}</span>
+        <span style={{ color: 'var(--sub)', fontSize: 13 }}>{title}</span>
       </div>
       <div className="grid grid-cols-4 gap-3">
         {cols.map(c => {
           const wpm = bestWpm[c.key];
           return (
             <div key={c.key} className="text-center">
-              <div style={{ color: '#646669', fontSize: 11, marginBottom: 4 }}>{c.label}</div>
-              <div style={{ color: wpm > 0 ? '#d1d0ce' : '#3a3c3f', fontSize: 26, fontWeight: 500 }}>
+              <div style={{ color: 'var(--sub)', fontSize: 11, marginBottom: 4 }}>{c.label}</div>
+              <div style={{ color: wpm > 0 ? 'var(--text)' : 'color-mix(in srgb, var(--sub) 30%, transparent)', fontSize: 26, fontWeight: 500 }}>
                 {wpm > 0 ? wpm : '—'}
               </div>
             </div>
