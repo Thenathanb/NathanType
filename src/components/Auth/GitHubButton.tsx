@@ -1,31 +1,25 @@
 import { useState } from 'react'
-import { GithubAuthProvider, signInWithPopup } from 'firebase/auth'
+import { GithubAuthProvider, signInWithRedirect } from 'firebase/auth'
 import { auth } from '../../firebase'
 
-const ERROR_MESSAGES: Record<string, string> = {
-  'auth/popup-blocked':          'popup was blocked — allow popups for this site and try again',
-  'auth/popup-closed-by-user':   'sign-in cancelled',
-  'auth/cancelled-popup-request':'sign-in cancelled',
-  'auth/unauthorized-domain':    'this domain is not authorised in Firebase — add it in the Firebase console',
-  'auth/operation-not-allowed':  'github sign-in is not enabled — enable it in the Firebase console',
-  'auth/network-request-failed': 'network error — check your connection',
-  'auth/account-exists-with-different-credential': 'an account already exists with this email using a different sign-in method',
-}
-
-export function GitHubButton({ onSuccess, onError }: { onSuccess: () => void; onError?: (msg: string) => void }) {
+export function GitHubButton({ onError }: { onSuccess?: () => void; onError?: (msg: string) => void }) {
   const [loading, setLoading] = useState(false)
 
   const handleClick = async () => {
     setLoading(true)
     try {
-      await signInWithPopup(auth, new GithubAuthProvider())
-      onSuccess()
+      await signInWithRedirect(auth, new GithubAuthProvider())
+      // Page navigates away — no further code runs here
     } catch (err: unknown) {
       const code = (err as { code?: string }).code || ''
-      const msg = ERROR_MESSAGES[code] || `sign-in failed (${code || 'unknown error'})`
+      const msg =
+        code === 'auth/unauthorized-domain'
+          ? 'this domain is not authorised — add it in the Firebase console'
+          : code === 'auth/operation-not-allowed'
+          ? 'github sign-in is not enabled in the Firebase console'
+          : `sign-in failed (${code || 'unknown error'})`
       console.error('GitHub sign-in failed:', err)
       onError?.(msg)
-    } finally {
       setLoading(false)
     }
   }
@@ -46,7 +40,7 @@ export function GitHubButton({ onSuccess, onError }: { onSuccess: () => void; on
       }}
     >
       <GitHubIcon />
-      {loading ? 'signing in…' : 'continue with github'}
+      {loading ? 'redirecting…' : 'continue with github'}
     </button>
   )
 }

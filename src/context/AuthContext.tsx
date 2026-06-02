@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { onAuthStateChanged, type User } from 'firebase/auth'
+import { getRedirectResult, onAuthStateChanged, type User } from 'firebase/auth'
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
@@ -89,6 +89,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile]   = useState<UserProfile | null>(null)
   const [loading, setLoading]           = useState(true)
   const unsubSnapshotRef                = useRef<(() => void) | null>(null)
+
+  // Handle the result of a signInWithRedirect call.
+  // Must run once on mount before onAuthStateChanged to catch errors
+  // (e.g. user denied GitHub permission, unauthorized domain).
+  useEffect(() => {
+    getRedirectResult(auth).catch((err: unknown) => {
+      const code = (err as { code?: string }).code ?? ''
+      // auth/popup-closed-by-user and cancelled are non-errors — skip them
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return
+      console.error('[OAuth redirect error]', err)
+    })
+  }, [])
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
