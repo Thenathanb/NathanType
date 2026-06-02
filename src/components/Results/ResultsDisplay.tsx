@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useTestStore } from '../../stores/testStore';
 import { useUserStore, getPbKey } from '../../stores/userStore';
 import { WpmChart } from './WpmChart';
 import { useAuth } from '../../context/AuthContext';
+import { LevelUpModal } from '../LevelUp/LevelUpModal';
+import { getLevelTier } from '../../data/levels/levels';
 import type { XpResult } from '../../types/index.js';
 import { MemeReaction } from '../MemeMode/MemeReaction';
 
@@ -13,8 +16,11 @@ export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps & 
   const { currentResult, isNewPersonalBest, mode, xpResult, currentSong } = useTestStore();
   const { personalBests } = useUserStore();
   const { currentUser } = useAuth();
+  const [levelUpDismissed, setLevelUpDismissed] = useState(false);
 
   if (!currentResult) return null;
+
+  const showLevelUp = !!(xpResult?.didLevelUp && !levelUpDismissed);
 
   const { stats, wpmHistory, config } = currentResult;
   const pbKey = getPbKey({ ...config, mode });
@@ -193,6 +199,11 @@ export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps & 
       <p className="text-center font-mono mt-4" style={{ color: 'var(--sub)', fontSize: 12, opacity: 0.6 }}>
         tab to restart
       </p>
+
+      {/* Level-up celebration modal */}
+      {showLevelUp && xpResult && (
+        <LevelUpModal xpResult={xpResult} onClose={() => setLevelUpDismissed(true)} />
+      )}
     </div>
   );
 }
@@ -227,31 +238,58 @@ function Row({ label, value, color }: { label: string; value: string | number; c
 
 function XpSection({ xpResult }: { xpResult: XpResult }) {
   const xpPct = Math.min(100, (xpResult.newXp / xpResult.newXpToNextLevel) * 100);
+  const tier = getLevelTier(xpResult.newLevel);
+  const bd = xpResult.xpBreakdown;
+
+  const rows: { label: string; value: number }[] = [
+    { label: 'base',           value: bd.base },
+    { label: 'perfect acc',    value: bd.accuracyBonus },
+    { label: 'speed bonus',    value: bd.speedBonus },
+    { label: 'mode bonus',     value: bd.modeBonus },
+  ].filter(r => r.value > 0);
+
   return (
-    <div className="font-mono text-center" style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <div className="flex items-center justify-center gap-4 mb-3">
-        <span style={{ color: 'var(--main)', fontSize: 15, fontWeight: 500 }}>
-          +{xpResult.xpGained} xp
-        </span>
-        {xpResult.didLevelUp && (
-          <span style={{ color: 'var(--text)', fontSize: 14 }}>
-            level up! → level {xpResult.newLevel}
-          </span>
-        )}
-      </div>
-      <div className="mx-auto" style={{ maxWidth: 320 }}>
+    <div className="font-mono" style={{ animation: 'fadeIn 0.3s ease-out', maxWidth: 320, margin: '0 auto' }}>
+      {/* Level badge + title */}
+      <div className="flex items-center justify-center gap-3 mb-4">
         <div
-          className="rounded-full overflow-hidden mb-1"
-          style={{ height: 6, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)' }}
+          className="flex items-center justify-center font-bold"
+          style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'color-mix(in srgb, var(--main) 15%, transparent)', border: '1.5px solid var(--main)', color: 'var(--main)', fontSize: 14 }}
         >
+          {xpResult.newLevel}
+        </div>
+        <div>
+          <div style={{ color: 'var(--main)', fontSize: 14, fontWeight: 600 }}>{tier.title}</div>
+          <div style={{ color: 'var(--sub)', fontSize: 11 }}>{tier.subtitle}</div>
+        </div>
+      </div>
+
+      {/* XP breakdown */}
+      <div className="rounded-lg p-3 mb-3" style={{ backgroundColor: 'var(--bg2)' }}>
+        {rows.map(r => (
+          <div key={r.label} className="flex justify-between" style={{ fontSize: 12, marginBottom: 2 }}>
+            <span style={{ color: 'var(--sub)' }}>{r.label}</span>
+            <span style={{ color: 'var(--text)' }}>+{r.value} xp</span>
+          </div>
+        ))}
+        <div className="flex justify-between pt-1 mt-1" style={{ borderTop: '0.5px solid color-mix(in srgb, var(--sub) 30%, transparent)', fontSize: 13 }}>
+          <span style={{ color: 'var(--sub)' }}>total</span>
+          <span style={{ color: 'var(--main)', fontWeight: 600 }}>+{xpResult.xpGained} xp</span>
+        </div>
+      </div>
+
+      {/* XP progress bar */}
+      <div>
+        <div className="flex justify-between mb-1" style={{ fontSize: 11, color: 'var(--sub)' }}>
+          <span>level {xpResult.newLevel}</span>
+          <span>{xpResult.newXp} / {xpResult.newXpToNextLevel} xp</span>
+        </div>
+        <div style={{ height: 5, backgroundColor: 'color-mix(in srgb, var(--sub) 25%, transparent)', borderRadius: 3 }}>
           <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${xpPct}%`, backgroundColor: 'var(--main)' }}
+            className="transition-all duration-700"
+            style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 3 }}
           />
         </div>
-        <p style={{ color: 'var(--sub)', fontSize: 12 }}>
-          {xpResult.newXp} / {xpResult.newXpToNextLevel} xp
-        </p>
       </div>
     </div>
   );

@@ -26,15 +26,43 @@ function getBestWpmKey(mode: string, modeOption: number): BestWpmKey | null {
   return null
 }
 
+function calcXp(data: TestResultData): import('../types/index.js').XpBreakdown {
+  const base = Math.round(data.wpm * (data.accuracy / 100))
+
+  const accuracyBonus = data.accuracy === 100 ? 10 : 0
+
+  // Speed milestone bonus
+  let speedBonus = 0
+  if      (data.wpm >= 150) speedBonus = 50
+  else if (data.wpm >= 120) speedBonus = 30
+  else if (data.wpm >= 100) speedBonus = 20
+  else if (data.wpm >=  80) speedBonus = 10
+  else if (data.wpm >=  60) speedBonus = 5
+
+  // Mode bonus
+  let modeBonus = 0
+  if (data.mode === 'meme')    modeBonus = 5
+  if (data.mode === 'quote')   modeBonus = 3
+  if (data.mode === 'content') modeBonus = 3
+
+  // Long test multiplier applied to base only (60s → 1.2×, 120s → 1.5×)
+  const multiplier =
+    data.mode === 'time' && data.modeOption >= 120 ? 1.5 :
+    data.mode === 'time' && data.modeOption >= 60  ? 1.2 : 1
+  const adjustedBase = Math.round(base * multiplier)
+
+  const total = adjustedBase + accuracyBonus + speedBonus + modeBonus
+
+  return { base: adjustedBase, accuracyBonus, speedBonus, modeBonus, total }
+}
+
 export async function saveTestResult(
   uid: string,
   data: TestResultData,
   timeElapsed: number
 ): Promise<XpResult> {
-  const baseXP = Math.round(data.wpm * (data.accuracy / 100))
-  const bonusXP = data.accuracy === 100 ? 10 : 0
-  const memeTax = data.mode === 'meme' ? 5 : 0
-  const totalXP = baseXP + bonusXP + memeTax
+  const breakdown = calcXp(data)
+  const totalXP = breakdown.total
 
   // Save the test result document — await it so failures surface properly
   try {
@@ -56,7 +84,9 @@ export async function saveTestResult(
 
   let xpResult: XpResult = {
     xpGained: totalXP,
+    xpBreakdown: breakdown,
     didLevelUp: false,
+    prevLevel: 1,
     newLevel: 1,
     newXp: 0,
     newXpToNextLevel: 100,
@@ -69,6 +99,7 @@ export async function saveTestResult(
       if (!snap.exists()) return
 
       const profile = snap.data() as UserProfile
+      const prevLevel = profile.level
       let xp = profile.xp + totalXP
       let level = profile.level
       let xpToNextLevel = profile.xpToNextLevel
@@ -115,7 +146,7 @@ export async function saveTestResult(
 
       tx.update(userRef, updates)
 
-      xpResult = { xpGained: totalXP, didLevelUp, newLevel: level, newXp: xp, newXpToNextLevel: xpToNextLevel }
+      xpResult = { xpGained: totalXP, xpBreakdown: breakdown, didLevelUp, prevLevel, newLevel: level, newXp: xp, newXpToNextLevel: xpToNextLevel }
     })
   } catch (err) {
     console.error('Failed to update user stats:', err)

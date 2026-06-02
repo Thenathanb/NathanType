@@ -2,6 +2,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { updateUserProfile } from '../../utils/firestoreService';
+import { getLevelTier, getNextTier } from '../../data/levels/levels';
 
 function fmtTime(s: number) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -24,6 +25,8 @@ export function ProfileHeader() {
   const displayName = userProfile.username || userProfile.displayName;
   const initials = displayName[0].toUpperCase();
   const xpPct = Math.min(100, (userProfile.xp / userProfile.xpToNextLevel) * 100);
+  const tier = getLevelTier(userProfile.level);
+  const nextTier = getNextTier(userProfile.level);
 
   const testsCompleted = userProfile.totalTests ?? 0;
   const testsStarted   = userProfile.testsStarted ?? testsCompleted;
@@ -96,15 +99,22 @@ export function ProfileHeader() {
               </div>
             )}
 
-            {/* XP bar */}
+            {/* Level + XP bar */}
             <div className="mt-3" style={{ maxWidth: 300 }}>
               <div className="flex justify-between mb-1 font-mono" style={{ fontSize: 12 }}>
-                <span style={{ color: 'var(--main)' }}>level {userProfile.level}</span>
+                <span style={{ color: 'var(--main)', fontWeight: 600 }}>
+                  lv {userProfile.level} · {tier.title}
+                </span>
                 <span style={{ color: 'var(--sub)' }}>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
               </div>
               <div style={{ height: 4, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)', borderRadius: 2 }}>
                 <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 2, transition: 'width 0.5s' }} />
               </div>
+              {nextTier && (
+                <div style={{ color: 'var(--sub)', fontSize: 10, marginTop: 3 }}>
+                  {nextTier.title} at level {nextTier.minLevel}
+                </div>
+              )}
             </div>
           </div>
         </div>

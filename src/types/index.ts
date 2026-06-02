@@ -160,9 +160,19 @@ export interface UserProfile {
 }
 
 // XP result returned after a test is saved to Firestore
+export interface XpBreakdown {
+  base: number        // wpm × accuracy/100
+  accuracyBonus: number  // +10 for perfect accuracy
+  speedBonus: number  // based on WPM milestone
+  modeBonus: number   // mode-specific bonus
+  total: number
+}
+
 export interface XpResult {
   xpGained: number
+  xpBreakdown: XpBreakdown
   didLevelUp: boolean
+  prevLevel: number
   newLevel: number
   newXp: number
   newXpToNextLevel: number

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
+import { getLevelTitle } from '../../data/levels/levels';
 import toast from 'react-hot-toast';
 
 interface ProfileDropdownProps {
@@ -55,6 +56,7 @@ export function ProfileDropdown({ onOpenSettings }: ProfileDropdownProps) {
       {userProfile && (
         <span
           className="font-mono font-medium px-2 py-0.5 rounded-full"
+          title={getLevelTitle(userProfile.level)}
           style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 12 }}
         >
           {userProfile.level}
@@ -116,7 +118,10 @@ export function ProfileDropdown({ onOpenSettings }: ProfileDropdownProps) {
             )}
             <div style={{ overflow: 'hidden' }}>
               <div className="truncate font-medium" style={{ color: 'var(--text)', fontSize: 14 }}>{displayName}</div>
-              <div className="truncate" style={{ color: 'var(--sub)', fontSize: 12 }}>{currentUser.email}</div>
+              <div className="truncate" style={{ color: 'var(--main)', fontSize: 11 }}>
+                lv {userProfile?.level} · {userProfile ? getLevelTitle(userProfile.level) : ''}
+              </div>
+              <div className="truncate" style={{ color: 'var(--sub)', fontSize: 11 }}>{currentUser.email}</div>
             </div>
           </div>
           <div style={{ height: '0.5px', backgroundColor: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
