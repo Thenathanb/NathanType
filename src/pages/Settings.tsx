@@ -147,7 +147,8 @@ function BehaviorSection() {
 // ── Appearance section ───────────────────────────────────────────
 function AppearanceSection() {
   const {
-    fontSize, caretStyle, caretSpeed, smoothCaret, showLiveWpm, showTimer,
+    fontSize, caretStyle, caretSpeed, smoothCaret,
+    showLiveWpm, showLiveAccuracy, showTimer, showCurrentWordLine,
     updateSettings,
   } = useSettingsStore();
 
@@ -177,9 +178,17 @@ function AppearanceSection() {
         <OptionBtn active={!showLiveWpm} onClick={() => updateSettings({ showLiveWpm: false })}>off</OptionBtn>
         <OptionBtn active={showLiveWpm}  onClick={() => updateSettings({ showLiveWpm: true })}>on</OptionBtn>
       </SettingRow>
+      <SettingRow name="show live accuracy" description="display live accuracy counter during test">
+        <OptionBtn active={!showLiveAccuracy} onClick={() => updateSettings({ showLiveAccuracy: false })}>off</OptionBtn>
+        <OptionBtn active={showLiveAccuracy}  onClick={() => updateSettings({ showLiveAccuracy: true })}>on</OptionBtn>
+      </SettingRow>
       <SettingRow name="show timer" description="display the countdown timer during timed tests">
         <OptionBtn active={!showTimer} onClick={() => updateSettings({ showTimer: false })}>off</OptionBtn>
         <OptionBtn active={showTimer}  onClick={() => updateSettings({ showTimer: true })}>on</OptionBtn>
+      </SettingRow>
+      <SettingRow name="word underline" description="show an underline beneath the current word being typed">
+        <OptionBtn active={!showCurrentWordLine} onClick={() => updateSettings({ showCurrentWordLine: false })}>off</OptionBtn>
+        <OptionBtn active={showCurrentWordLine}  onClick={() => updateSettings({ showCurrentWordLine: true })}>on</OptionBtn>
       </SettingRow>
     </section>
   );

@@ -117,6 +117,7 @@ export interface Settings {
   caretSpeed: 'slow' | 'medium' | 'fast' | 'off';
   smoothCaret: boolean;
   showLiveWpm: boolean;
+  showLiveAccuracy: boolean;
   showTimer: boolean;
 
   // Sound

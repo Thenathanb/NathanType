@@ -21,6 +21,7 @@ const defaultSettings: Settings & { fontId: string; activeFunbox: string | null;
   caretSpeed: 'medium',
   smoothCaret: true,
   showLiveWpm: true,
+  showLiveAccuracy: true,
   showTimer: true,
 
   // Sound

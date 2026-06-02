@@ -15,7 +15,7 @@ import type { SongData } from '../types/index.js';
 export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; onOpenSettings?: () => void }) {
   const { currentInput, timeRemaining, liveWpm, liveAccuracy, handleKeyPress, handleRestart } = useTypingTest();
   const { isComplete, isActive, mode, timeLimit, setWords, setCurrentSong, setQuoteSource, restartSignal } = useTestStore();
-  const { showLiveWpm, showTimer } = useSettingsStore();
+  const { showLiveWpm, showLiveAccuracy, showTimer } = useSettingsStore();
 
   const handleSongLoad = useCallback((words: string[], song: SongData) => {
     setWords(words);
@@ -113,12 +113,14 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
                 <div className="font-mono uppercase tracking-wider" style={{ color: 'var(--sub)', fontSize: 11 }}>wpm</div>
               </div>
             )}
-            <div className="text-center">
-              <div className="font-mono font-medium tabular-nums" style={{ color: 'var(--main)', fontSize: 28 }}>
-                {liveAccuracy}
+            {showLiveAccuracy && (
+              <div className="text-center">
+                <div className="font-mono font-medium tabular-nums" style={{ color: 'var(--main)', fontSize: 28 }}>
+                  {liveAccuracy}
+                </div>
+                <div className="font-mono uppercase tracking-wider" style={{ color: 'var(--sub)', fontSize: 11 }}>acc</div>
               </div>
-              <div className="font-mono uppercase tracking-wider" style={{ color: 'var(--sub)', fontSize: 11 }}>acc</div>
-            </div>
+            )}
           </div>
 
           {/* Timer (time mode) */}
