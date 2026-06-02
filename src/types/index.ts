@@ -161,10 +161,10 @@ export interface UserProfile {
 
 // XP result returned after a test is saved to Firestore
 export interface XpBreakdown {
-  base: number        // wpm × accuracy/100
-  accuracyBonus: number  // +10 for perfect accuracy
-  speedBonus: number  // based on WPM milestone
-  modeBonus: number   // mode-specific bonus
+  base: number           // time-based XP after accuracy modifier (seconds * 2 * accMod)
+  accuracyBonus: number  // bonus for 100% accuracy
+  streakBonus: number    // reserved for streak multiplier
+  modeBonus: number      // bonus from punctuation / numbers / quote / meme / content
   total: number
 }
 
@@ -174,8 +174,8 @@ export interface XpResult {
   didLevelUp: boolean
   prevLevel: number
   newLevel: number
-  newXp: number
-  newXpToNextLevel: number
+  newXp: number          // XP within the current level (for progress bar)
+  newXpToNextLevel: number  // max XP for the current level
 }
 
 // Leaderboard Entry

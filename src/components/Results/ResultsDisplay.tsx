@@ -250,10 +250,10 @@ function XpSection({ xpResult }: { xpResult: XpResult }) {
   const bd = xpResult.xpBreakdown;
 
   const rows: { label: string; value: number }[] = [
-    { label: 'base',           value: bd.base },
-    { label: 'perfect acc',    value: bd.accuracyBonus },
-    { label: 'speed bonus',    value: bd.speedBonus },
-    { label: 'mode bonus',     value: bd.modeBonus },
+    { label: 'base',         value: bd.base },
+    { label: 'perfect acc',  value: bd.accuracyBonus },
+    { label: 'mode bonus',   value: bd.modeBonus },
+    { label: 'streak bonus', value: bd.streakBonus },
   ].filter(r => r.value > 0);
 
   return (

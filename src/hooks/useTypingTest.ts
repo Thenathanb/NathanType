@@ -482,6 +482,8 @@ export function useTypingTest() {
           mode: s.mode,
           modeOption,
           language: 'english',
+          punctuation: s.punctuation,
+          numbers: s.numbers,
           chars: {
             correct: stats.correctChars,
             incorrect: stats.incorrectChars,

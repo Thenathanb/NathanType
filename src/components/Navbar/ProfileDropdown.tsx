@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
-import { getLevelTitle } from '../../data/levels/levels';
+import { getLevelTitle, getXpDetails } from '../../data/levels/levels';
 import toast from 'react-hot-toast';
 
 interface ProfileDropdownProps {
@@ -131,22 +131,26 @@ export function ProfileDropdown({ onOpenSettings: _onOpenSettings }: ProfileDrop
               </div>
               <div className="truncate" style={{ color: 'var(--sub)', fontSize: 11 }}>{currentUser.email}</div>
               {/* XP progress bar */}
-              {userProfile && (
+              {userProfile && (() => {
+                const xpD = getXpDetails(userProfile.xp ?? 0);
+                return (
                 <div style={{ marginTop: 6 }}>
                   <div className="flex justify-between" style={{ fontSize: 11, color: 'var(--sub)', marginBottom: 3 }}>
-                    <span>Level {userProfile.level}</span>
-                    <span>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
+                    <span>Level {xpD.level}</span>
+                    <span>{xpD.xpInLevel} / {xpD.levelMaxXp} xp</span>
                   </div>
                   <div style={{ height: 3, backgroundColor: 'color-mix(in srgb, var(--sub) 20%, transparent)', borderRadius: 2 }}>
                     <div style={{
                       height: '100%',
-                      width: `${Math.min(100, (userProfile.xp / userProfile.xpToNextLevel) * 100)}%`,
+                      width: `${xpD.progressPct}%`,
                       backgroundColor: 'var(--main)',
                       borderRadius: 2,
                       transition: 'width 0.4s',
                     }} />
                   </div>
                 </div>
+                );
+              })()
               )}
             </div>
           </div>

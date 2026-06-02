@@ -35,3 +35,36 @@ export function getNextTier(level: number): LevelTier | null {
 export function getLevelTitle(level: number): string {
   return getLevelTier(level).title;
 }
+
+// ── Monkeytype-style cumulative XP math ──────────────────────────
+
+/** Level from cumulative total XP (inverse of getTotalXpToReachLevel). */
+export function getLevelFromTotalXp(totalXp: number): number {
+  return Math.max(1, Math.floor((Math.sqrt(392 * totalXp + 22801) - 53) / 98));
+}
+
+/** XP required to complete a given level (not cumulative). */
+export function getLevelMaxXp(level: number): number {
+  return 49 * (level - 1) + 100;
+}
+
+/** Cumulative XP needed to *reach* a given level (not to finish it). */
+export function getTotalXpToReachLevel(level: number): number {
+  return Math.round((49 * level * level + 53 * level - 102) / 2);
+}
+
+export interface XpDetails {
+  level: number;
+  xpInLevel: number;      // XP earned within the current level
+  levelMaxXp: number;     // XP needed to finish the current level
+  progressPct: number;    // 0–100
+}
+
+/** Full level progress details from a cumulative total XP value. */
+export function getXpDetails(totalXp: number): XpDetails {
+  const level = getLevelFromTotalXp(totalXp);
+  const xpInLevel = totalXp - getTotalXpToReachLevel(level);
+  const levelMaxXp = getLevelMaxXp(level);
+  const progressPct = levelMaxXp > 0 ? Math.min(100, (xpInLevel / levelMaxXp) * 100) : 0;
+  return { level, xpInLevel, levelMaxXp, progressPct };
+}

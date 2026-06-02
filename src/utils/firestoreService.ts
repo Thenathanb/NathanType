@@ -2,6 +2,7 @@ import { addDoc, collection, doc, getDoc, increment, runTransaction, setDoc, upd
 import { db } from '../firebase'
 import type { UserProfile } from '../context/AuthContext'
 import type { XpResult } from '../types/index.js'
+import { getLevelFromTotalXp, getLevelMaxXp, getTotalXpToReachLevel } from '../data/levels/levels'
 
 export interface TestResultData {
   wpm: number
@@ -11,6 +12,8 @@ export interface TestResultData {
   mode: string
   modeOption: number
   language: string
+  punctuation?: boolean
+  numbers?: boolean
   chars: { correct: number; incorrect: number; extra: number; missed: number }
 }
 
@@ -26,34 +29,41 @@ function getBestWpmKey(mode: string, modeOption: number): BestWpmKey | null {
   return null
 }
 
-function calcXp(data: TestResultData): import('../types/index.js').XpBreakdown {
-  const base = Math.round(data.wpm * (data.accuracy / 100))
+/**
+ * Monkeytype-style XP formula:
+ * base = testDuration * 2  (2 XP per second)
+ * modifier builds up from mode/options bonuses
+ * accuracy penalty: max(0, (acc - 50) / 50)  — below 50% acc earns nothing
+ */
+function calcXp(data: TestResultData, timeElapsed: number): import('../types/index.js').XpBreakdown {
+  const rawBase = Math.round(timeElapsed * 2)
 
-  const accuracyBonus = data.accuracy === 100 ? 10 : 0
+  // Accuracy modifier scales from 0 (at 50% acc) to 1 (at 100% acc)
+  const accuracyMod = Math.max(0, (data.accuracy - 50) / 50)
 
-  // Speed milestone bonus
-  let speedBonus = 0
-  if      (data.wpm >= 150) speedBonus = 50
-  else if (data.wpm >= 120) speedBonus = 30
-  else if (data.wpm >= 100) speedBonus = 20
-  else if (data.wpm >=  80) speedBonus = 10
-  else if (data.wpm >=  60) speedBonus = 5
+  // Per-modifier bonuses (stacked on top of 1.0)
+  let modifierBonus = 0
+  const hasPerfectAcc = data.accuracy === 100
+  if (hasPerfectAcc) modifierBonus += 0.5
+  if (data.mode === 'quote') {
+    modifierBonus += 0.5
+  } else {
+    if (data.punctuation) modifierBonus += 0.4
+    if (data.numbers)     modifierBonus += 0.1
+  }
+  if (data.mode === 'meme' || data.mode === 'content') modifierBonus += 0.3
 
-  // Mode bonus
-  let modeBonus = 0
-  if (data.mode === 'meme')    modeBonus = 5
-  if (data.mode === 'quote')   modeBonus = 3
-  if (data.mode === 'content') modeBonus = 3
+  const fullModifier = 1 + modifierBonus
+  const total = Math.max(1, Math.round(rawBase * fullModifier * accuracyMod))
 
-  // Long test multiplier applied to base only (60s → 1.2×, 120s → 1.5×)
-  const multiplier =
-    data.mode === 'time' && data.modeOption >= 120 ? 1.5 :
-    data.mode === 'time' && data.modeOption >= 60  ? 1.2 : 1
-  const adjustedBase = Math.round(base * multiplier)
+  // Breakdown for display — split the total back into labelled parts
+  const base         = Math.max(0, Math.round(rawBase * accuracyMod))
+  const accuracyBonus = hasPerfectAcc
+    ? Math.max(0, Math.round(rawBase * 0.5 * accuracyMod))
+    : 0
+  const modeBonus    = Math.max(0, total - base - accuracyBonus)
 
-  const total = adjustedBase + accuracyBonus + speedBonus + modeBonus
-
-  return { base: adjustedBase, accuracyBonus, speedBonus, modeBonus, total }
+  return { base, accuracyBonus, streakBonus: 0, modeBonus, total }
 }
 
 export async function saveTestResult(
@@ -61,10 +71,10 @@ export async function saveTestResult(
   data: TestResultData,
   timeElapsed: number
 ): Promise<XpResult> {
-  const breakdown = calcXp(data)
-  const totalXP = breakdown.total
+  const breakdown = calcXp(data, timeElapsed)
+  const xpGained = breakdown.total
 
-  // Save the test result document — await it so failures surface properly
+  // Save the raw test result — don't block XP on this
   try {
     await addDoc(collection(db, 'testResults', uid, 'results'), {
       wpm: data.wpm,
@@ -79,11 +89,11 @@ export async function saveTestResult(
     })
   } catch (err) {
     console.error('Failed to save test result doc:', err)
-    // Don't block XP — continue even if the result save fails
   }
 
+  // Default — returned if the transaction fails
   let xpResult: XpResult = {
-    xpGained: totalXP,
+    xpGained,
     xpBreakdown: breakdown,
     didLevelUp: false,
     prevLevel: 1,
@@ -99,23 +109,24 @@ export async function saveTestResult(
       if (!snap.exists()) return
 
       const profile = snap.data() as UserProfile
-      const prevLevel = profile.level
-      let xp = profile.xp + totalXP
-      let level = profile.level
-      let xpToNextLevel = profile.xpToNextLevel
-      let didLevelUp = false
 
-      while (xp >= xpToNextLevel) {
-        xp -= xpToNextLevel
-        level++
-        xpToNextLevel = Math.round(xpToNextLevel * 1.15)
-        didLevelUp = true
-      }
+      // ── Cumulative XP (Monkeytype approach) ──────────────────────
+      // xp is a lifetime total; level is derived from it via formula.
+      const prevTotalXp = profile.xp ?? 0
+      const newTotalXp  = prevTotalXp + xpGained
 
-      // Streak calculation
-      const today = new Date().toDateString()
-      const lastDate = profile.lastTestDate ? new Date(profile.lastTestDate).toDateString() : null
+      const prevLevel = getLevelFromTotalXp(prevTotalXp)
+      const newLevel  = getLevelFromTotalXp(newTotalXp)
+      const didLevelUp = newLevel > prevLevel
+
+      // Progress within the new current level
+      const xpInLevel  = newTotalXp - getTotalXpToReachLevel(newLevel)
+      const levelMaxXp = getLevelMaxXp(newLevel)
+
+      // ── Streak ───────────────────────────────────────────────────
+      const today     = new Date().toDateString()
       const yesterday = new Date(Date.now() - 86_400_000).toDateString()
+      const lastDate  = profile.lastTestDate ? new Date(profile.lastTestDate).toDateString() : null
       let currentStreak = profile.currentStreak ?? 0
       if (lastDate === today) {
         // already typed today — streak unchanged
@@ -127,26 +138,33 @@ export async function saveTestResult(
       const bestStreak = Math.max(profile.bestStreak ?? 0, currentStreak)
 
       const updates: Record<string, unknown> = {
-        totalTests: profile.totalTests + 1,
-        totalTimeTyping: profile.totalTimeTyping + timeElapsed,
-        xp,
-        level,
-        xpToNextLevel,
+        xp: newTotalXp,
+        level: newLevel,
+        xpToNextLevel: levelMaxXp,
+        totalTests: (profile.totalTests ?? 0) + 1,
+        totalTimeTyping: (profile.totalTimeTyping ?? 0) + timeElapsed,
         currentStreak,
         bestStreak,
         lastTestDate: Date.now(),
       }
 
-      // Update best WPM for this mode/option if it's a new record
       const pbKey = getBestWpmKey(data.mode, data.modeOption)
-      if (pbKey && data.wpm > (profile.bestWpm[pbKey] || 0)) {
+      if (pbKey && data.wpm > (profile.bestWpm?.[pbKey] ?? 0)) {
         updates.bestWpm = { ...profile.bestWpm, [pbKey]: data.wpm }
         updates.bestWpmDates = { ...profile.bestWpmDates, [pbKey]: Date.now() }
       }
 
       tx.update(userRef, updates)
 
-      xpResult = { xpGained: totalXP, xpBreakdown: breakdown, didLevelUp, prevLevel, newLevel: level, newXp: xp, newXpToNextLevel: xpToNextLevel }
+      xpResult = {
+        xpGained,
+        xpBreakdown: breakdown,
+        didLevelUp,
+        prevLevel,
+        newLevel,
+        newXp: Math.max(0, xpInLevel),
+        newXpToNextLevel: levelMaxXp,
+      }
     })
   } catch (err) {
     console.error('Failed to update user stats:', err)
