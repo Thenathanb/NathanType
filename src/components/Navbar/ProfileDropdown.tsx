@@ -55,11 +55,20 @@ export function ProfileDropdown({ onOpenSettings }: ProfileDropdownProps) {
 
       {userProfile && (
         <span
-          className="font-mono font-medium px-2 py-0.5 rounded-full"
-          title={getLevelTitle(userProfile.level)}
-          style={{ backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 12 }}
+          className="font-mono font-medium flex items-center gap-1"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--main) 15%, transparent)',
+            border: '0.5px solid var(--main)',
+            color: 'var(--main)',
+            fontSize: 11,
+            borderRadius: 20,
+            padding: '2px 8px',
+            whiteSpace: 'nowrap',
+          }}
         >
-          {userProfile.level}
+          <span style={{ fontWeight: 700 }}>{userProfile.level}</span>
+          <span style={{ opacity: 0.8 }}>·</span>
+          <span>{getLevelTitle(userProfile.level)}</span>
         </span>
       )}
 
