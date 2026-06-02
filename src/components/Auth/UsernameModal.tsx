@@ -9,22 +9,24 @@ interface UsernameModalProps {
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/
 
-type Status = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+type Status = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'check-failed'
 
 const STATUS_TEXT: Record<Status, string> = {
   idle: '',
   checking: 'checking…',
   available: 'available ✓',
   taken: 'already taken',
-  invalid: '3–20 chars, letters, numbers and underscores only',
+  invalid: '3–20 chars, letters numbers and _ only',
+  'check-failed': '',   // allow submit anyway; server will catch real duplicates
 }
 
 const STATUS_COLOR: Record<Status, string> = {
-  idle: '#646669',
-  checking: '#646669',
+  idle: 'var(--sub)',
+  checking: 'var(--sub)',
   available: '#4caf50',
-  taken: '#ca4754',
-  invalid: '#ca4754',
+  taken: 'var(--error)',
+  invalid: 'var(--error)',
+  'check-failed': 'var(--sub)',
 }
 
 export function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
@@ -34,7 +36,7 @@ export function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Debounced Firestore availability check
+  // Debounced availability check — 300ms feels snappy
   useEffect(() => {
     if (!value) { setStatus('idle'); return }
     if (!USERNAME_RE.test(value)) { setStatus('invalid'); return }
@@ -44,61 +46,84 @@ export function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
         const available = await checkUsernameAvailable(value)
         setStatus(available ? 'available' : 'taken')
       } catch {
-        setStatus('idle')
+        // Firestore read failed (likely security rules on usernames collection).
+        // Fall back to 'check-failed' — the server transaction is the real guard.
+        setStatus('check-failed')
       }
-    }, 500)
+    }, 300)
     return () => clearTimeout(t)
   }, [value])
 
-  // Reset when modal opens
   useEffect(() => {
     if (isOpen) { setValue(''); setStatus('idle'); setError('') }
   }, [isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!currentUser || status !== 'available' || loading) return
+    if (!currentUser || loading) return
+    // Allow submit if available or if availability check couldn't run
+    if (status !== 'available' && status !== 'check-failed') return
+    if (!USERNAME_RE.test(value)) return
+
     setLoading(true)
     setError('')
-    const result = await setUsername(currentUser.uid, value)
-    setLoading(false)
-    if (result.success) {
-      onClose()
-    } else {
-      setError(result.error || 'something went wrong')
-      setStatus('taken')
+    try {
+      const result = await setUsername(currentUser.uid, value)
+      if (result.success) {
+        onClose()
+      } else {
+        setError(result.error || 'something went wrong')
+        setStatus('taken')
+      }
+    } catch (err) {
+      setError('failed to save — check your connection and try again')
     }
+    setLoading(false)
   }
 
   if (!isOpen) return null
 
-  const canSubmit = status === 'available' && !loading
-  const borderColor = value ? STATUS_COLOR[status] : '#646669'
+  const canSubmit = !loading && USERNAME_RE.test(value) &&
+    (status === 'available' || status === 'check-failed')
+  const borderColor = value
+    ? (STATUS_COLOR[status] ?? 'var(--sub)')
+    : 'var(--sub)'
 
   return (
     <div
       className="fixed inset-0 flex items-center justify-center z-50"
       style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="relative w-full font-mono"
-        style={{ maxWidth: 380, margin: '0 16px', backgroundColor: '#323437', borderRadius: 12, padding: 32 }}
+        style={{
+          maxWidth: 380,
+          margin: '0 16px',
+          backgroundColor: 'var(--bg2)',
+          borderRadius: 12,
+          padding: 32,
+        }}
       >
         {/* Close */}
         <button
           onClick={onClose}
           className="absolute flex items-center justify-center transition-colors"
-          style={{ top: 14, right: 14, color: '#646669', background: 'none', border: 'none', cursor: 'pointer', width: 28, height: 28, fontSize: 20, lineHeight: 1 }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#d1d0ce')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#646669')}
+          style={{
+            top: 14, right: 14,
+            color: 'var(--sub)', background: 'none', border: 'none',
+            cursor: 'pointer', width: 28, height: 28, fontSize: 20, lineHeight: 1,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--sub)')}
         >
           ×
         </button>
 
-        <h2 className="mb-1.5" style={{ color: '#d1d0ce', fontSize: 18, fontWeight: 500 }}>
+        <h2 className="mb-1.5" style={{ color: 'var(--text)', fontSize: 18, fontWeight: 500 }}>
           choose your username
         </h2>
-        <p className="mb-7" style={{ color: '#646669', fontSize: 13 }}>
+        <p className="mb-7" style={{ color: 'var(--sub)', fontSize: 13 }}>
           this is how you'll appear on leaderboards and your profile
         </p>
 
@@ -114,8 +139,8 @@ export function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
             autoCapitalize="none"
             className="font-mono text-sm w-full outline-none"
             style={{
-              backgroundColor: '#2c2e31',
-              color: '#d1d0ce',
+              backgroundColor: 'var(--bg)',
+              color: 'var(--text)',
               borderRadius: 8,
               padding: '10px 14px',
               border: `1px solid ${borderColor}`,
@@ -124,13 +149,14 @@ export function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
             }}
           />
 
+          {/* Status line */}
           {value && STATUS_TEXT[status] && (
             <p style={{ color: STATUS_COLOR[status], fontSize: 12, marginTop: -4 }}>
               {STATUS_TEXT[status]}
             </p>
           )}
           {error && (
-            <p style={{ color: '#ca4754', fontSize: 12, marginTop: -4 }}>{error}</p>
+            <p style={{ color: 'var(--error)', fontSize: 12, marginTop: -4 }}>{error}</p>
           )}
 
           <button
@@ -138,14 +164,15 @@ export function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
             disabled={!canSubmit}
             className="w-full font-mono font-medium transition-all"
             style={{
-              backgroundColor: canSubmit ? '#e2b714' : 'transparent',
-              color: canSubmit ? '#2c2e31' : '#646669',
+              backgroundColor: canSubmit ? 'var(--main)' : 'transparent',
+              color: canSubmit ? 'var(--bg)' : 'var(--sub)',
               borderRadius: 8,
               padding: '10px 16px',
-              border: `1px solid ${canSubmit ? 'transparent' : '#646669'}`,
+              border: `1px solid ${canSubmit ? 'transparent' : 'var(--sub)'}`,
               cursor: canSubmit ? 'pointer' : 'not-allowed',
               fontSize: 14,
               marginTop: 4,
+              opacity: canSubmit ? 1 : 0.6,
             }}
           >
             {loading ? 'saving…' : 'set username'}
@@ -155,7 +182,7 @@ export function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
             type="button"
             onClick={onClose}
             className="font-mono text-center transition-opacity hover:opacity-80"
-            style={{ color: '#646669', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
+            style={{ color: 'var(--sub)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
           >
             skip for now
           </button>

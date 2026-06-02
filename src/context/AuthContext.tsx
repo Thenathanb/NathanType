@@ -105,11 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+      // Auth state is now known — unblock ProtectedRoute immediately.
+      // Firestore profile loading continues asynchronously below.
+      setLoading(false)
+
       // ── 1. Serve cached profile immediately (0 ms) ──────────────
       const cached = readCache(user.uid)
       if (cached) {
         setUserProfile(cached)
-        setLoading(false)   // page renders instantly from cache
       }
 
       const userRef = doc(db, 'users', user.uid)
@@ -157,14 +160,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Snapshot re-fires automatically after setDoc — no manual setUserProfile needed.
           } catch (err) {
             console.error('Failed to initialize user document:', err)
-            setLoading(false)
           }
           // If fromCache === true && !snap.exists(): the offline cache has a stale
           // "missing" entry. Wait for the server snapshot before acting.
         }
       }, (err) => {
         console.error('Firestore snapshot error:', err)
-        setLoading(false)
       })
     })
 
