@@ -1,24 +1,52 @@
+import { useState } from 'react'
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { auth } from '../../firebase'
 
-export function GoogleButton({ onSuccess }: { onSuccess: () => void }) {
+const ERROR_MESSAGES: Record<string, string> = {
+  'auth/popup-blocked':          'popup was blocked — allow popups for this site and try again',
+  'auth/popup-closed-by-user':   'sign-in cancelled',
+  'auth/cancelled-popup-request':'sign-in cancelled',
+  'auth/unauthorized-domain':    'this domain is not authorised in Firebase — add it in the Firebase console',
+  'auth/operation-not-allowed':  'google sign-in is not enabled — enable it in the Firebase console',
+  'auth/network-request-failed': 'network error — check your connection',
+  'auth/account-exists-with-different-credential': 'an account already exists with this email using a different sign-in method',
+}
+
+export function GoogleButton({ onSuccess, onError }: { onSuccess: () => void; onError?: (msg: string) => void }) {
+  const [loading, setLoading] = useState(false)
+
   const handleClick = async () => {
+    setLoading(true)
     try {
       await signInWithPopup(auth, new GoogleAuthProvider())
       onSuccess()
-    } catch (err) {
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code || ''
+      const msg = ERROR_MESSAGES[code] || `sign-in failed (${code || 'unknown error'})`
       console.error('Google sign-in failed:', err)
+      onError?.(msg)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <button
       onClick={handleClick}
+      disabled={loading}
       className="flex items-center justify-center gap-3 w-full font-mono text-sm font-medium transition-opacity hover:opacity-90"
-      style={{ backgroundColor: '#ffffff', color: '#2c2e31', borderRadius: 8, padding: '10px 16px', border: 'none', cursor: 'pointer' }}
+      style={{
+        backgroundColor: '#ffffff',
+        color: '#2c2e31',
+        borderRadius: 8,
+        padding: '10px 16px',
+        border: 'none',
+        cursor: loading ? 'not-allowed' : 'pointer',
+        opacity: loading ? 0.7 : 1,
+      }}
     >
       <GoogleIcon />
-      continue with google
+      {loading ? 'signing in…' : 'continue with google'}
     </button>
   )
 }

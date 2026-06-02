@@ -10,6 +10,7 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [oauthError, setOauthError] = useState('')
 
   useEffect(() => {
     if (!isOpen) return
@@ -19,7 +20,9 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   }, [isOpen, onClose])
 
   // Reset to sign-in when reopened
-  useEffect(() => { if (isOpen) setMode('signin') }, [isOpen])
+  useEffect(() => {
+    if (isOpen) { setMode('signin'); setOauthError('') }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -31,16 +34,16 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     >
       <div
         className="relative w-full font-mono"
-        style={{ maxWidth: 380, margin: '0 16px', backgroundColor: '#323437', borderRadius: 12, padding: 32 }}
+        style={{ maxWidth: 380, margin: '0 16px', backgroundColor: 'var(--bg2)', borderRadius: 12, padding: 32 }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Close */}
         <button
           onClick={onClose}
           className="absolute flex items-center justify-center transition-colors"
-          style={{ top: 14, right: 14, color: '#646669', background: 'none', border: 'none', cursor: 'pointer', width: 28, height: 28, fontSize: 20, lineHeight: 1 }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#d1d0ce')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#646669')}
+          style={{ top: 14, right: 14, color: 'var(--sub)', background: 'none', border: 'none', cursor: 'pointer', width: 28, height: 28, fontSize: 20, lineHeight: 1 }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--sub)')}
         >
           ×
         </button>
@@ -50,13 +53,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {(['signin', 'signup'] as const).map((m) => (
             <button
               key={m}
-              onClick={() => setMode(m)}
+              onClick={() => { setMode(m); setOauthError('') }}
               className="font-mono text-sm font-medium transition-colors pb-1"
               style={{
-                color: mode === m ? '#e2b714' : '#646669',
+                color: mode === m ? 'var(--main)' : 'var(--sub)',
                 background: 'none',
                 border: 'none',
-                borderBottom: mode === m ? '2px solid #e2b714' : '2px solid transparent',
+                borderBottom: mode === m ? '2px solid var(--main)' : '2px solid transparent',
                 cursor: 'pointer',
                 padding: '0 0 4px 0',
               }}
@@ -67,16 +70,23 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         </div>
 
         {/* OAuth buttons */}
-        <div className="flex flex-col gap-3 mb-5">
-          <GoogleButton onSuccess={onClose} />
-          <GitHubButton onSuccess={onClose} />
+        <div className="flex flex-col gap-3 mb-4">
+          <GoogleButton onSuccess={onClose} onError={setOauthError} />
+          <GitHubButton onSuccess={onClose} onError={setOauthError} />
         </div>
+
+        {/* OAuth error */}
+        {oauthError && (
+          <p className="font-mono mb-4" style={{ color: 'var(--error)', fontSize: 13 }}>
+            {oauthError}
+          </p>
+        )}
 
         {/* Divider */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1" style={{ height: 1, backgroundColor: '#646669', opacity: 0.3 }} />
-          <span style={{ color: '#646669', fontSize: 13 }}>or</span>
-          <div className="flex-1" style={{ height: 1, backgroundColor: '#646669', opacity: 0.3 }} />
+          <div className="flex-1" style={{ height: 1, backgroundColor: 'var(--sub)', opacity: 0.3 }} />
+          <span style={{ color: 'var(--sub)', fontSize: 13 }}>or</span>
+          <div className="flex-1" style={{ height: 1, backgroundColor: 'var(--sub)', opacity: 0.3 }} />
         </div>
 
         {/* Email form */}
