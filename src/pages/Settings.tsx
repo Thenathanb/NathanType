@@ -390,10 +390,10 @@ export function Settings() {
 
   return (
     <div className="page-scroll" style={{ fontFamily: 'inherit' }}>
-      {/* Sticky tab bar */}
+      {/* Sticky tab bar — top:0 because the scroll container already starts below the navbar */}
       <div
         className="sticky z-40"
-        style={{ top: 56, backgroundColor: 'var(--bg)', paddingTop: 12, paddingBottom: 4 }}
+        style={{ top: 0, backgroundColor: 'var(--bg)', paddingTop: 12, paddingBottom: 4 }}
       >
         <div className="w-full max-w-4xl mx-auto px-5">
           <div
