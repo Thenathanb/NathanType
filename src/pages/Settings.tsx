@@ -247,12 +247,26 @@ function DangerSection() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
 
   const displayName = userProfile?.username || userProfile?.displayName || currentUser?.displayName || 'user';
 
   const handleResetSettings = () => {
     resetSettings();
     toast.success('settings reset to defaults');
+  };
+
+  const handleReconcile = async () => {
+    if (!currentUser) return;
+    setReconciling(true);
+    try {
+      const { reconcileStats } = await import('../utils/reconcileStats');
+      const { totalTests, fixed } = await reconcileStats(currentUser.uid);
+      toast.success(`stats recalculated: ${totalTests} tests, ${fixed.length} fields updated`);
+    } catch {
+      toast.error('recalculation failed — check console');
+    }
+    setReconciling(false);
   };
 
   const handleDeleteAccount = async () => {
@@ -299,6 +313,11 @@ function DangerSection() {
       <SettingRow name="reset settings" description="restore all settings to their default values">
         <DangerBtn label="reset settings" onClick={handleResetSettings} />
       </SettingRow>
+      {currentUser && (
+        <SettingRow name="recalculate stats" description="recount totalTests and rebuild personal bests from your result history">
+          <DangerBtn label={reconciling ? 'calculating…' : 'recalculate'} onClick={handleReconcile} />
+        </SettingRow>
+      )}
       {currentUser && (
         <SettingRow name="delete account" description="permanently delete your account and all associated data">
           <DangerBtn label="delete account" onClick={() => setShowDeleteModal(true)} />

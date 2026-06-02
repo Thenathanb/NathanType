@@ -8,8 +8,15 @@ function fmtTime(s: number) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
-function fmtDate(ts: number) {
-  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+/** Handle Firestore Timestamp objects, epoch-ms numbers, or null. */
+function fmtDate(createdAt: unknown): string {
+  if (!createdAt) return 'recently'
+  // Firestore Timestamp has a .toDate() method
+  const d = typeof (createdAt as { toDate?: () => Date }).toDate === 'function'
+    ? (createdAt as { toDate: () => Date }).toDate()
+    : new Date(createdAt as number)
+  if (isNaN(d.getTime())) return 'recently'
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function ProfileHeader() {

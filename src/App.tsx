@@ -32,6 +32,12 @@ function App() {
   const [usernamePromptDismissed, setUsernamePromptDismissed] = useState(false);
 
   useEffect(() => { setUsernamePromptDismissed(false); }, [currentUser?.uid]);
+
+  // Process any test saves that failed while offline
+  useEffect(() => {
+    if (!currentUser) return;
+    import('./utils/saveQueue').then(({ processQueue }) => processQueue()).catch(() => {});
+  }, [currentUser?.uid]);
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { applyFont(fontFamily); }, [fontFamily]);
 

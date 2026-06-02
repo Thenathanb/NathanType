@@ -115,15 +115,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userRef = doc(db, 'users', user.uid)
 
       // ── 2. Real-time snapshot — skips the blocking getDoc round-trip.
-      //       If doc doesn't exist (first sign-in), create it here.
+      //       Only create the user doc when the SERVER (not local cache) confirms
+      //       it doesn't exist. This prevents overwriting createdAt on devices
+      //       that have an empty offline cache for a user who already has a doc.
       unsubSnapshotRef.current = onSnapshot(userRef, async (snap) => {
         if (snap.exists()) {
           const profile = snap.data() as UserProfile
           setUserProfile(profile)
           writeCache(user.uid, profile)
           setLoading(false)
-        } else {
-          // First sign-in: create the user doc. Snapshot will re-fire with data.
+        } else if (!snap.metadata.fromCache) {
+          // Server confirmed the document is absent — this is a genuine new user.
           try {
             const providerId = user.providerData[0]?.providerId
             const provider: UserProfile['provider'] =
@@ -152,10 +154,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               bestWpmDates: { time15: null, time30: null, time60: null, time120: null, words10: null, words25: null, words50: null, words100: null },
             }
             await setDoc(userRef, newProfile)
+            // Snapshot re-fires automatically after setDoc — no manual setUserProfile needed.
           } catch (err) {
             console.error('Failed to initialize user document:', err)
             setLoading(false)
           }
+          // If fromCache === true && !snap.exists(): the offline cache has a stale
+          // "missing" entry. Wait for the server snapshot before acting.
         }
       }, (err) => {
         console.error('Firestore snapshot error:', err)

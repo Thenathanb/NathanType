@@ -1,8 +1,9 @@
-import { addDoc, collection, doc, getDoc, increment, runTransaction, setDoc, updateDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, increment, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { UserProfile } from '../context/AuthContext'
 import type { XpResult } from '../types/index.js'
 import { getLevelFromTotalXp, getLevelMaxXp, getTotalXpToReachLevel } from '../data/levels/levels'
+import { logFirestoreError } from './errorLog'
 
 export interface TestResultData {
   wpm: number
@@ -99,26 +100,14 @@ export async function saveTestResult(
   timeElapsed: number
 ): Promise<XpResult> {
   const breakdown = calcXp(data, timeElapsed)
-  const xpGained = breakdown.total
+  const xpGained  = breakdown.total
 
-  // Save the raw test result — don't block XP on this
-  try {
-    await addDoc(collection(db, 'testResults', uid, 'results'), {
-      wpm: data.wpm,
-      rawWpm: data.rawWpm,
-      accuracy: data.accuracy,
-      consistency: data.consistency,
-      mode: data.mode,
-      modeOption: data.modeOption,
-      language: data.language,
-      chars: data.chars,
-      timestamp: Date.now(),
-    })
-  } catch (err) {
-    console.error('Failed to save test result doc:', err)
-  }
+  // Pre-create the result doc ref so we can include it in the transaction.
+  // Using doc(collection(...)) gives a client-generated ID without a write.
+  const resultRef = doc(collection(db, 'testResults', uid, 'results'))
+  const userRef   = doc(db, 'users', uid)
 
-  // Default — returned if the transaction fails
+  // Default — returned if the transaction fails so the UI still shows XP
   let xpResult: XpResult = {
     xpGained,
     xpBreakdown: breakdown,
@@ -130,31 +119,35 @@ export async function saveTestResult(
   }
 
   try {
-    const userRef = doc(db, 'users', uid)
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(userRef)
-      if (!snap.exists()) return
+      if (!snap.exists()) {
+        // User doc missing — write the result but skip counter updates.
+        tx.set(resultRef, {
+          wpm: data.wpm, rawWpm: data.rawWpm, accuracy: data.accuracy,
+          consistency: data.consistency, mode: data.mode, modeOption: data.modeOption,
+          language: data.language, chars: data.chars,
+          timestamp: serverTimestamp(), clientTimestamp: Date.now(),
+        })
+        return
+      }
 
       const profile = snap.data() as UserProfile
 
-      // ── Cumulative XP (Monkeytype approach) ──────────────────────
-      // xp is a lifetime total; level is derived from it via formula.
+      // ── XP (cumulative total) ─────────────────────────────────────
       const prevTotalXp = profile.xp ?? 0
       const newTotalXp  = prevTotalXp + xpGained
-
-      const prevLevel = getLevelFromTotalXp(prevTotalXp)
-      const newLevel  = getLevelFromTotalXp(newTotalXp)
-      const didLevelUp = newLevel > prevLevel
-
-      // Progress within the new current level
-      const xpInLevel  = newTotalXp - getTotalXpToReachLevel(newLevel)
-      const levelMaxXp = getLevelMaxXp(newLevel)
+      const prevLevel   = getLevelFromTotalXp(prevTotalXp)
+      const newLevel    = getLevelFromTotalXp(newTotalXp)
+      const xpInLevel   = Math.max(0, newTotalXp - getTotalXpToReachLevel(newLevel))
+      const levelMaxXp  = getLevelMaxXp(newLevel)
+      const didLevelUp  = newLevel > prevLevel
 
       // ── Streak ───────────────────────────────────────────────────
-      const today     = new Date().toDateString()
-      const yesterday = new Date(Date.now() - 86_400_000).toDateString()
-      const lastDate  = profile.lastTestDate ? new Date(profile.lastTestDate).toDateString() : null
-      let currentStreak = profile.currentStreak ?? 0
+      const today        = new Date().toDateString()
+      const yesterday    = new Date(Date.now() - 86_400_000).toDateString()
+      const lastDate     = profile.lastTestDate ? new Date(profile.lastTestDate).toDateString() : null
+      let currentStreak  = profile.currentStreak ?? 0
       if (lastDate === today) {
         // already typed today — streak unchanged
       } else if (lastDate === yesterday) {
@@ -164,46 +157,58 @@ export async function saveTestResult(
       }
       const bestStreak = Math.max(profile.bestStreak ?? 0, currentStreak)
 
-      const updates: Record<string, unknown> = {
+      // ── User doc update (use increment() to avoid stale-read races) ──
+      const userUpdates: Record<string, unknown> = {
         xp: newTotalXp,
         level: newLevel,
         xpToNextLevel: levelMaxXp,
-        totalTests: (profile.totalTests ?? 0) + 1,
-        totalTimeTyping: (profile.totalTimeTyping ?? 0) + timeElapsed,
+        totalTests: increment(1),
+        totalTimeTyping: increment(timeElapsed),
         currentStreak,
         bestStreak,
-        lastTestDate: Date.now(),
+        lastTestDate: serverTimestamp(),
       }
 
+      // ── Personal best ─────────────────────────────────────────────
       const pbKey = getBestWpmKey(data.mode, data.modeOption)
       if (pbKey && data.wpm > (profile.bestWpm?.[pbKey] ?? 0)) {
-        updates.bestWpm = { ...profile.bestWpm, [pbKey]: data.wpm }
-        updates.bestWpmDates = { ...profile.bestWpmDates, [pbKey]: Date.now() }
+        userUpdates[`bestWpm.${pbKey}`]      = data.wpm
+        userUpdates[`bestWpmDates.${pbKey}`] = Date.now()
       }
 
-      tx.update(userRef, updates)
+      // ── Result document ───────────────────────────────────────────
+      tx.set(resultRef, {
+        wpm: data.wpm, rawWpm: data.rawWpm, accuracy: data.accuracy,
+        consistency: data.consistency, mode: data.mode, modeOption: data.modeOption,
+        language: data.language, chars: data.chars,
+        timestamp: serverTimestamp(), clientTimestamp: Date.now(),
+      })
+
+      // Both writes go in the same transaction — atomic commit.
+      tx.update(userRef, userUpdates)
 
       xpResult = {
-        xpGained,
-        xpBreakdown: breakdown,
-        didLevelUp,
-        prevLevel,
-        newLevel,
-        newXp: Math.max(0, xpInLevel),
-        newXpToNextLevel: levelMaxXp,
+        xpGained, xpBreakdown: breakdown,
+        didLevelUp, prevLevel, newLevel,
+        newXp: xpInLevel, newXpToNextLevel: levelMaxXp,
       }
     })
   } catch (err) {
-    console.error('Failed to update user stats:', err)
+    logFirestoreError('saveTestResult', err)
+    // Queue for retry when connection recovers
+    try {
+      const { queueFailedSave } = await import('./saveQueue')
+      queueFailedSave({ uid, data, timeElapsed })
+    } catch { /* saveQueue unavailable */ }
   }
 
   return xpResult
 }
 
-/** Fire-and-forget: increment testsStarted when a new test begins. */
+/** Fire-and-forget: increment testsStarted when the user types the first character. */
 export function incrementTestsStarted(uid: string): void {
   updateDoc(doc(db, 'users', uid), { testsStarted: increment(1) })
-    .catch((err) => console.error('incrementTestsStarted failed:', err))
+    .catch((err) => logFirestoreError('incrementTestsStarted', err))
 }
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
