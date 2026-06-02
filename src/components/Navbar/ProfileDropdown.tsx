@@ -23,6 +23,7 @@ export function ProfileDropdown({ onOpenSettings: _onOpenSettings }: ProfileDrop
     currentUser.displayName || currentUser.email?.split('@')[0] || 'user';
   const avatarUrl = userProfile?.photoURL || currentUser.photoURL || null;
   const initials = displayName[0].toUpperCase();
+  const xpD = getXpDetails(userProfile?.xp ?? 0);
 
   const show = () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -131,9 +132,7 @@ export function ProfileDropdown({ onOpenSettings: _onOpenSettings }: ProfileDrop
               </div>
               <div className="truncate" style={{ color: 'var(--sub)', fontSize: 11 }}>{currentUser.email}</div>
               {/* XP progress bar */}
-              {userProfile && (() => {
-                const xpD = getXpDetails(userProfile.xp ?? 0);
-                return (
+              {userProfile && (
                 <div style={{ marginTop: 6 }}>
                   <div className="flex justify-between" style={{ fontSize: 11, color: 'var(--sub)', marginBottom: 3 }}>
                     <span>Level {xpD.level}</span>
@@ -149,8 +148,6 @@ export function ProfileDropdown({ onOpenSettings: _onOpenSettings }: ProfileDrop
                     }} />
                   </div>
                 </div>
-                );
-              })()
               )}
             </div>
           </div>
