@@ -38,7 +38,7 @@ export function ResultsTable({ timeRange, modeFilter }: { timeRange: TimeRange; 
       collection(db, 'testResults', currentUser.uid, 'results'),
       where('timestamp', '>=', cutoff),
       orderBy('timestamp', 'desc'),
-      limit(100),
+      limit(50),
     );
     getDocs(q)
       .then(snap => setRows(snap.docs.map(d => ({ id: d.id, ...d.data() } as TestRow))))

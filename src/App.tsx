@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Settings } from './components/Settings/Settings';
+import { Settings as SettingsModal } from './components/Settings/Settings';
+import { Settings as SettingsPage } from './pages/Settings';
 import { TestHistory } from './components/History/TestHistory';
 import { AuthModal } from './components/Auth/AuthModal';
 import { UsernameModal } from './components/Auth/UsernameModal';
@@ -74,7 +75,7 @@ function App() {
           <NavIcon title="New test"      onClick={handleLogoClick}               icon={<IconKeyboard />} />
           <NavIcon title="Leaderboard"   onClick={() => setIsHistoryOpen(true)}  icon={<IconTrophy />} />
           <NavIcon title="Info"          onClick={() => {}}                      icon={<IconInfo />} />
-          <NavIcon title="Settings"      onClick={() => setIsSettingsOpen(true)} icon={<IconSettings />} />
+          <NavIcon title="Settings"      onClick={() => navigate('/settings')}   icon={<IconSettings />} />
           <NavIcon title="Notifications" onClick={() => {}}                      icon={<IconBell />} />
           <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--sub)', opacity: 0.4 }} />
 
@@ -102,7 +103,8 @@ function App() {
           <Route path="/profile/:username"  element={<PublicProfile />} />
           <Route path="/account"            element={<ProtectedRoute><Account /></ProtectedRoute>} />
           <Route path="/friends"            element={<ProtectedRoute><Friends /></ProtectedRoute>} />
-          <Route path="/settings"           element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+          <Route path="/settings"           element={<SettingsPage />} />
+          <Route path="/account-settings"   element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
           <Route path="/profile"            element={<ProtectedRoute><Account /></ProtectedRoute>} />
           <Route path="*"                   element={<Navigate to="/" />} />
         </Routes>
@@ -136,7 +138,7 @@ function App() {
       </footer>
 
       {/* ── Modals ───────────────────────────────── */}
-      <Settings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <TestHistory isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <UsernameModal isOpen={showUsernameModal} onClose={() => setUsernamePromptDismissed(true)} />

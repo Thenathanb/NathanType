@@ -10,7 +10,7 @@ interface ProfileDropdownProps {
   onOpenSettings: () => void;
 }
 
-export function ProfileDropdown({ onOpenSettings }: ProfileDropdownProps) {
+export function ProfileDropdown({ onOpenSettings: _onOpenSettings }: ProfileDropdownProps) {
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -55,20 +55,19 @@ export function ProfileDropdown({ onOpenSettings }: ProfileDropdownProps) {
 
       {userProfile && (
         <span
-          className="font-mono font-medium flex items-center gap-1"
+          className="font-mono font-medium"
           style={{
             backgroundColor: 'color-mix(in srgb, var(--main) 15%, transparent)',
-            border: '0.5px solid var(--main)',
+            border: '1px solid color-mix(in srgb, var(--main) 40%, transparent)',
             color: 'var(--main)',
-            fontSize: 11,
-            borderRadius: 20,
-            padding: '2px 8px',
+            fontSize: 12,
+            fontWeight: 500,
+            borderRadius: 4,
+            padding: '1px 7px',
             whiteSpace: 'nowrap',
           }}
         >
-          <span style={{ fontWeight: 700 }}>{userProfile.level}</span>
-          <span style={{ opacity: 0.8 }}>·</span>
-          <span>{getLevelTitle(userProfile.level)}</span>
+          {userProfile.level}
         </span>
       )}
 
@@ -125,12 +124,30 @@ export function ProfileDropdown({ onOpenSettings }: ProfileDropdownProps) {
                 {initials}
               </div>
             )}
-            <div style={{ overflow: 'hidden' }}>
+            <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
               <div className="truncate font-medium" style={{ color: 'var(--text)', fontSize: 14 }}>{displayName}</div>
               <div className="truncate" style={{ color: 'var(--main)', fontSize: 11 }}>
                 lv {userProfile?.level} · {userProfile ? getLevelTitle(userProfile.level) : ''}
               </div>
               <div className="truncate" style={{ color: 'var(--sub)', fontSize: 11 }}>{currentUser.email}</div>
+              {/* XP progress bar */}
+              {userProfile && (
+                <div style={{ marginTop: 6 }}>
+                  <div className="flex justify-between" style={{ fontSize: 11, color: 'var(--sub)', marginBottom: 3 }}>
+                    <span>Level {userProfile.level}</span>
+                    <span>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
+                  </div>
+                  <div style={{ height: 3, backgroundColor: 'color-mix(in srgb, var(--sub) 20%, transparent)', borderRadius: 2 }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${Math.min(100, (userProfile.xp / userProfile.xpToNextLevel) * 100)}%`,
+                      backgroundColor: 'var(--main)',
+                      borderRadius: 2,
+                      transition: 'width 0.4s',
+                    }} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div style={{ height: '0.5px', backgroundColor: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
@@ -139,7 +156,7 @@ export function ProfileDropdown({ onOpenSettings }: ProfileDropdownProps) {
           <MenuItem icon={<IcoBar />}       label="user stats"       onClick={() => go('/account')} />
           <MenuItem icon={<IcoUsers />}     label="friends"          onClick={() => go('/friends')} />
           <MenuItem icon={<IcoCircle />}    label="public profile"   onClick={() => go(`/profile/${userProfile?.username || currentUser.uid}`)} />
-          <MenuItem icon={<IcoSettings />}  label="account settings" onClick={() => { go('/settings'); onOpenSettings(); }} />
+          <MenuItem icon={<IcoSettings />}  label="account settings" onClick={() => go('/account-settings')} />
 
           <div style={{ height: '0.5px', backgroundColor: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
 

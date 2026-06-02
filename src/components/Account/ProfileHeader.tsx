@@ -6,9 +6,7 @@ import { getLevelTier, getNextTier } from '../../data/levels/levels';
 
 function fmtTime(s: number) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
-  if (m > 0) return `${m}m ${String(sec).padStart(2, '0')}s`;
-  return `${sec}s`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 function fmtDate(ts: number) {
   return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -59,10 +57,10 @@ export function ProfileHeader() {
         {/* Avatar */}
         <div className="flex items-start gap-5 flex-1 min-w-0">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            <img src={avatarUrl} alt="avatar" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           ) : (
             <div className="flex items-center justify-center font-mono font-medium shrink-0"
-              style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 28 }}>
+              style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 30 }}>
               {initials}
             </div>
           )}
@@ -101,18 +99,16 @@ export function ProfileHeader() {
 
             {/* Level + XP bar */}
             <div className="mt-3" style={{ maxWidth: 300 }}>
-              <div className="flex justify-between mb-1 font-mono" style={{ fontSize: 12 }}>
-                <span style={{ color: 'var(--main)', fontWeight: 600 }}>
-                  lv {userProfile.level} · {tier.title}
-                </span>
-                <span style={{ color: 'var(--sub)' }}>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
+              <div className="flex justify-between mb-1 font-mono" style={{ fontSize: 11, color: 'var(--sub)' }}>
+                <span>level {userProfile.level}</span>
+                <span>{userProfile.xp} / {userProfile.xpToNextLevel} xp</span>
               </div>
-              <div style={{ height: 4, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)', borderRadius: 2 }}>
-                <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 2, transition: 'width 0.5s' }} />
+              <div style={{ height: 5, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)', borderRadius: 3 }}>
+                <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 3, transition: 'width 0.5s' }} />
               </div>
               {nextTier && (
                 <div style={{ color: 'var(--sub)', fontSize: 10, marginTop: 3 }}>
-                  {nextTier.title} at level {nextTier.minLevel}
+                  {tier.title} · {nextTier.title} at level {nextTier.minLevel}
                 </div>
               )}
             </div>

@@ -5,12 +5,13 @@ import type { Settings } from '../types/index.js';
 interface SettingsStore extends Settings {
   fontId: string;
   activeFunbox: string | null;
+  resultSaving: boolean;
   setActiveFunbox: (id: string | null) => void;
-  updateSettings: (settings: Partial<Settings & { fontId: string }>) => void;
+  updateSettings: (settings: Partial<Settings & { fontId: string; resultSaving: boolean }>) => void;
   resetSettings: () => void;
 }
 
-const defaultSettings: Settings & { fontId: string; activeFunbox: string | null } = {
+const defaultSettings: Settings & { fontId: string; activeFunbox: string | null; resultSaving: boolean } = {
   // Visual
   theme: 'serika-dark',
   fontId: 'roboto-mono',
@@ -46,6 +47,9 @@ const defaultSettings: Settings & { fontId: string; activeFunbox: string | null 
 
   // Funbox
   activeFunbox: null,
+
+  // Result saving
+  resultSaving: true,
 };
 
 export const useSettingsStore = create<SettingsStore>()(

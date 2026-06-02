@@ -6,10 +6,10 @@ import { useAuth } from '../../context/AuthContext';
 type Range = '12m' | '6m' | '30d';
 
 function colorFor(count: number): string {
-  if (count === 0) return 'rgba(255,255,255,0.05)';
-  if (count <= 2)  return 'color-mix(in srgb, var(--main) 20%, transparent)';
-  if (count <= 5)  return 'color-mix(in srgb, var(--main) 45%, transparent)';
-  if (count <= 9)  return 'color-mix(in srgb, var(--main) 70%, transparent)';
+  if (count === 0)  return 'rgba(255,255,255,0.05)';
+  if (count <= 2)   return 'color-mix(in srgb, var(--main) 25%, transparent)';
+  if (count <= 5)   return 'color-mix(in srgb, var(--main) 50%, transparent)';
+  if (count <= 9)   return 'color-mix(in srgb, var(--main) 75%, transparent)';
   return 'var(--main)';
 }
 
