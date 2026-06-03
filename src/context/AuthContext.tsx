@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
+import { logFirestoreError } from '../utils/errorLog'
 
 export interface PersonalBestEntry {
   wpm: number
@@ -212,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // "missing" entry. Wait for the server snapshot before acting.
         }
       }, (err) => {
-        console.error('Firestore snapshot error:', err)
+        logFirestoreError('profile snapshot', err)
       })
     })
 

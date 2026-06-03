@@ -8,10 +8,10 @@ export function logFirestoreError(operation: string, err: unknown): void {
     stack: e.stack,
   })
 
-  if (import.meta.env.DEV) {
-    toast.error(`firestore ${operation}: ${e.code ?? e.message ?? 'error'}`, {
-      duration: 4000,
-      id: `fs-err-${operation}`,
-    })
-  }
+  const code = e.code ?? ''
+  const msg = code === 'permission-denied'
+    ? 'firestore: permission denied — deploy your security rules (see console)'
+    : `firestore ${operation}: ${code || e.message || 'error'}`
+
+  toast.error(msg, { duration: 6000, id: `fs-err-${operation}` })
 }
