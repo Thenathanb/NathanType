@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTestStore } from '../../stores/testStore';
-import { useUserStore, getPbKey } from '../../stores/userStore';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, getPbEntry } from '../../context/AuthContext';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { LevelUpModal } from '../LevelUp/LevelUpModal';
 import { WpmChart } from './WpmChart';
@@ -19,8 +18,7 @@ interface ResultsDisplayProps {
 
 export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps) {
   const { currentResult, isNewPersonalBest, mode, xpResult, currentSong } = useTestStore();
-  const { personalBests } = useUserStore();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { activeFunbox } = useSettingsStore();
   const [levelUpDismissed, setLevelUpDismissed] = useState(false);
   const [wordsOpen, setWordsOpen] = useState(false);
@@ -38,8 +36,12 @@ export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps) {
   if (!currentResult) return null;
 
   const { stats, wpmHistory, config, typedHistory } = currentResult;
-  const pbKey = getPbKey({ ...config, mode });
-  const pb = personalBests[pbKey];
+
+  // Read PB from live Firestore data (via AuthContext) — not the local Zustand cache that
+  // was never hydrated from Firestore. Only show for time/words modes.
+  const pbMode = (config.mode === 'time' ? 'time' : config.mode === 'words' ? 'words' : null) as 'time' | 'words' | null
+  const pbMode2 = config.mode === 'time' ? String(config.timeLimit) : String(config.wordLimit)
+  const pb = pbMode && userProfile ? getPbEntry(userProfile, pbMode, pbMode2) : null
 
   const showLevelUp = !!(xpResult?.didLevelUp && !levelUpDismissed);
 
@@ -152,13 +154,10 @@ export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps) {
         </div>
       )}
 
-      {/* PB detail row */}
-      {pb && (
+      {/* PB detail row — only show non-PB reference; PB itself is shown via the badge in HeadlineStats */}
+      {!isNewPersonalBest && pb && (
         <div style={{ marginTop: 12, fontSize: 12, color: 'var(--sub)' }}>
-          {isNewPersonalBest
-            ? `previous pb: ${pb.wpm} wpm`
-            : `pb: ${pb.wpm} wpm · ${pb.accuracy}% acc`
-          }
+          pb: {pb.wpm} wpm · {pb.acc}% acc
         </div>
       )}
 

@@ -12,10 +12,7 @@ export function GitHubButton({ onSuccess, onError }: { onSuccess?: () => void; o
       onSuccess?.()
     } catch (err: unknown) {
       const code = (err as { code?: string }).code || ''
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        setLoading(false)
-        return
-      }
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return
       const msg =
         code === 'auth/unauthorized-domain'
           ? 'this domain is not authorised — add it in the Firebase console'
@@ -26,6 +23,7 @@ export function GitHubButton({ onSuccess, onError }: { onSuccess?: () => void; o
           : `sign-in failed (${code || 'unknown error'})`
       console.error('GitHub sign-in failed:', err)
       onError?.(msg)
+    } finally {
       setLoading(false)
     }
   }

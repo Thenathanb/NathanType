@@ -147,7 +147,6 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
           >
             <HintChip keys={['tab', 'enter']} label="restart" />
             <HintChip keys={['esc']} label="cancel" />
-            <HintChip keys={['⌘', 'shift', 'p']} label="command line" />
           </div>
         </div>
       ) : (

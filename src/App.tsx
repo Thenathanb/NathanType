@@ -111,7 +111,6 @@ function App() {
           <Route path="/friends"            element={<ProtectedRoute><Friends /></ProtectedRoute>} />
           <Route path="/settings"           element={<SettingsPage />} />
           <Route path="/account-settings"   element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
-          <Route path="/profile"            element={<ProtectedRoute><Account /></ProtectedRoute>} />
           <Route path="*"                   element={<Navigate to="/" />} />
         </Routes>
       </main>

@@ -10,6 +10,7 @@ interface RawResult {
   consistency: number
   mode: string
   modeOption: number
+  timeElapsed?: number
   clientTimestamp?: number
   timestamp?: { toMillis?: () => number } | number
 }
@@ -38,6 +39,7 @@ export async function reconcileStats(uid: string): Promise<{ totalTests: number;
   resultsSnap.forEach(docSnap => {
     const r = docSnap.data() as RawResult
     totalTests++
+    totalTimeTyping += r.timeElapsed ?? 0
 
     const ts = typeof r.timestamp === 'number'
       ? r.timestamp

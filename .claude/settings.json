@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(find /Users/nathanbakare/Desktop/monkeytype/frontend/src/ts -name \"account-controller.ts\" -o -name \"result-controller.ts\" 2>/dev/null)",
+      "Read(//Users/nathanbakare/Desktop/monkeytype/frontend/src/ts/**)",
+      "Bash(find /Users/nathanbakare/Desktop/monkeytype/frontend/src/ts -name \"xp*\" -o -name \"*xp*\" 2>/dev/null | grep -v node_modules)",
+      "Bash(find /Users/nathanbakare/Desktop/monkeytype/backend/src -name \"*.ts\" | head -40)",
+      "Read(//Users/nathanbakare/Desktop/monkeytype/backend/src/**)",
+      "Bash(find /Users/nathanbakare/Desktop/monkeytype -path \"*/schemas/results*\" -o -path \"*/schemas/users*\" 2>/dev/null | grep -v node_modules | head -20)",
+      "Read(//Users/nathanbakare/Desktop/monkeytype/**)"
     ]
   }
 }

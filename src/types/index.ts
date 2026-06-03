@@ -144,23 +144,6 @@ export interface Settings {
   difficulty: 'normal' | 'expert' | 'master';
 }
 
-// User Profile
-export interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  avatar?: string;
-  bio?: string;
-  createdAt: number;
-  stats: {
-    testsCompleted: number;
-    timeTyping: number; // total seconds
-    highestWpm: number;
-    averageWpm: number;
-    averageAccuracy: number;
-  };
-}
-
 // XP result returned after a test is saved to Firestore
 export interface XpBreakdown {
   base: number           // time-based XP after accuracy modifier (seconds * 2 * accMod)

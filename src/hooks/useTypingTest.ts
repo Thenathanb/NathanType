@@ -5,8 +5,7 @@ import { useUserStore } from '../stores/userStore';
 import type { TypedWord, TestResult, WpmDataPoint } from '../types/index.js';
 import { getCharStates, calculateAllStats, calculateWpm, calculateRawWpm, calculateAccuracy } from '../utils/calculateStats';
 import { generateTestWords, generateWords } from '../utils/wordGenerator';
-import { getPbKey } from '../stores/userStore';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, getPbEntry } from '../context/AuthContext';
 import { saveTestResult, computeXpResult, incrementTestsStarted } from '../utils/firestoreService';
 import { invalidateTestResultsCache } from './useTestResults';
 import { getActiveFunboxWords } from '../utils/funbox/index';
@@ -60,7 +59,7 @@ export function useTypingTest() {
     activeFunbox,
   } = useSettingsStore();
 
-  const { addTestResult, updateUserStats, checkAndUpdatePersonalBest } = useUserStore();
+  const { addTestResult } = useUserStore();
   const { currentUser, userProfile } = useAuth();
 
   const [currentInput, setCurrentInput] = useState('');
@@ -454,8 +453,12 @@ export function useTypingTest() {
       difficulty: s.difficulty,
     };
 
-    const pbKey = getPbKey(resultConfig);
-    const isNewPb = checkAndUpdatePersonalBest(pbKey, stats.wpm, stats.accuracy, stats.consistency);
+    // Compare against live Firestore PBs (from AuthContext) rather than a local Zustand map
+    // that was never hydrated from Firestore — fixes the "always new PB on first session" bug.
+    const pbMode = s.mode === 'time' ? 'time' : s.mode === 'words' ? 'words' : null
+    const pbMode2 = String(s.mode === 'time' ? s.timeLimit : s.wordLimit)
+    const existingPb = pbMode && userProfile ? getPbEntry(userProfile, pbMode as 'time' | 'words', pbMode2) : null
+    const isNewPb = !!pbMode && stats.wpm > (existingPb?.wpm ?? 0)
 
     const result: TestResult = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -468,7 +471,6 @@ export function useTypingTest() {
 
     state.setCurrentResult(result, isNewPb);
     addTestResult(result);
-    updateUserStats(stats.wpm, stats.accuracy, stats.timeElapsed);
 
     // XP: compute locally so the results screen updates immediately,
     // then persist to Firestore in the background.
@@ -492,9 +494,10 @@ export function useTypingTest() {
         },
       };
 
-      // Show XP instantly — no Firestore round-trip needed for display
+      // Show XP instantly — pass streak so the displayed bonus matches what Firestore will write
       const currentTotalXp = userProfile?.xp ?? 0;
-      const xpResult = computeXpResult(currentTotalXp, testData, stats.timeElapsed);
+      const streakLength = userProfile?.streak?.length ?? 0;
+      const xpResult = computeXpResult(currentTotalXp, testData, stats.timeElapsed, streakLength);
       useTestStore.getState().setXpResult(xpResult);
 
       // Persist to Firestore in the background
@@ -502,7 +505,7 @@ export function useTypingTest() {
         .then(() => { invalidateTestResultsCache(currentUser.uid); })
         .catch((err) => { console.error('Firestore save failed:', err); });
     }
-  }, [checkAndUpdatePersonalBest, addTestResult, updateUserStats, currentUser, userProfile]);
+  }, [addTestResult, currentUser, userProfile]);
 
   // Keep a stable ref so intervals always call the latest version
   const handleTestCompleteRef = useRef(handleTestComplete);
