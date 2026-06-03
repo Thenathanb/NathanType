@@ -20,6 +20,10 @@ const CACHE_TTL_MS = 60_000;
 const resultCache = new Map<string, { results: CachedTestResult[]; fetchedAt: number }>();
 const pending = new Map<string, Promise<CachedTestResult[]>>();
 
+// Listeners registered by useTestResults instances — called when the cache is invalidated
+// so the hook re-fetches without needing a uid change.
+const invalidateListeners = new Set<() => void>();
+
 function fetchFromFirestore(uid: string): Promise<CachedTestResult[]> {
   if (pending.has(uid)) return pending.get(uid)!;
 
@@ -50,6 +54,14 @@ export function useTestResults(uid: string | undefined) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Increments when invalidateTestResultsCache fires, causing the fetch effect to re-run.
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    const listener = () => setVersion(v => v + 1);
+    invalidateListeners.add(listener);
+    return () => { invalidateListeners.delete(listener); };
+  }, []);
 
   useEffect(() => {
     if (!uid) { setLoading(false); return; }
@@ -74,12 +86,14 @@ export function useTestResults(uid: string | undefined) {
         );
         setLoading(false);
       });
-  }, [uid]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, version]);
 
   return { results, loading, error };
 }
 
-/** Call after saving a new test result so the next page visit re-fetches. */
+/** Call after saving a new test result to bust the cache and re-fetch immediately. */
 export function invalidateTestResultsCache(uid: string) {
   resultCache.delete(uid);
+  invalidateListeners.forEach(cb => cb());
 }

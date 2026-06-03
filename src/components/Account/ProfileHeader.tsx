@@ -99,7 +99,6 @@ export function ProfileHeader() {
             <div className="font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>joined {fmtDate(getAddedAt(userProfile))}</div>
             {getStreakLength(userProfile) > 0 && (
               <div className="flex items-center gap-1 mt-0.5 font-mono" style={{ color: 'var(--sub)', fontSize: 13 }}>
-                <span style={{ color: 'var(--main)' }}>🔥</span>
                 <span style={{ color: 'var(--main)' }}>{getStreakLength(userProfile)}</span>
                 <span>day streak · best: {getStreakMax(userProfile)}</span>
               </div>

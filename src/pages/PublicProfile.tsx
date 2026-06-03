@@ -95,7 +95,7 @@ export function PublicProfile() {
               <div style={{ color: '#d1d0ce', fontSize: 22, fontWeight: 500 }}>{displayName}</div>
               <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>joined {fmtDate(getAddedAt(profile))}</div>
               {getStreakLength(profile) > 0 && (
-                <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>🔥 {getStreakLength(profile)} day streak</div>
+                <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>{getStreakLength(profile)} day streak</div>
               )}
               <div className="mt-3" style={{ maxWidth: 280 }}>
                 <div className="flex justify-between mb-1" style={{ fontSize: 12 }}>

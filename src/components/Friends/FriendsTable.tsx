@@ -145,7 +145,7 @@ export function FriendsTable() {
                 <td style={{ color: 'var(--sub)', paddingRight: 16 }}>{fmt(getTimeTyping(f.profile))}</td>
                 <td style={{ paddingRight: 16 }}>
                   {getStreakLength(f.profile) > 0
-                    ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--text)' }}>{getStreakLength(f.profile)}</span></span>
+                    ? <span style={{ color: 'var(--text)' }}>{getStreakLength(f.profile)}</span>
                     : <span style={{ color: 'var(--sub)' }}>—</span>}
                 </td>
                 <td style={{ color: 'var(--text)', paddingRight: 16 }}>{getPbEntry(f.profile, 'time', '15')?.wpm || '—'}</td>
@@ -189,7 +189,7 @@ export function FriendsTable() {
             <td style={{ color: 'var(--main)', paddingRight: 16 }}>{fmt(getTimeTyping(ownProfile))}</td>
             <td style={{ paddingRight: 16 }}>
               {getStreakLength(ownProfile) > 0
-                ? <span><span style={{ color: 'var(--main)' }}>🔥</span> <span style={{ color: 'var(--main)' }}>{getStreakLength(ownProfile)}</span></span>
+                ? <span style={{ color: 'var(--main)' }}>{getStreakLength(ownProfile)}</span>
                 : <span style={{ color: 'var(--sub)' }}>—</span>}
             </td>
             <td style={{ color: 'var(--main)', paddingRight: 16 }}>{getPbEntry(ownProfile, 'time', '15')?.wpm || '—'}</td>
