@@ -1,22 +1,28 @@
 import { useState } from 'react'
-import { GithubAuthProvider, signInWithRedirect } from 'firebase/auth'
+import { GithubAuthProvider, signInWithPopup } from 'firebase/auth'
 import { auth } from '../../firebase'
 
-export function GitHubButton({ onError }: { onSuccess?: () => void; onError?: (msg: string) => void }) {
+export function GitHubButton({ onSuccess, onError }: { onSuccess?: () => void; onError?: (msg: string) => void }) {
   const [loading, setLoading] = useState(false)
 
   const handleClick = async () => {
     setLoading(true)
     try {
-      await signInWithRedirect(auth, new GithubAuthProvider())
-      // Page navigates away — no further code runs here
+      await signInWithPopup(auth, new GithubAuthProvider())
+      onSuccess?.()
     } catch (err: unknown) {
       const code = (err as { code?: string }).code || ''
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        setLoading(false)
+        return
+      }
       const msg =
         code === 'auth/unauthorized-domain'
           ? 'this domain is not authorised — add it in the Firebase console'
           : code === 'auth/operation-not-allowed'
           ? 'github sign-in is not enabled in the Firebase console'
+          : code === 'auth/popup-blocked'
+          ? 'popup was blocked — please allow popups for this site'
           : `sign-in failed (${code || 'unknown error'})`
       console.error('GitHub sign-in failed:', err)
       onError?.(msg)
@@ -40,7 +46,7 @@ export function GitHubButton({ onError }: { onSuccess?: () => void; onError?: (m
       }}
     >
       <GitHubIcon />
-      {loading ? 'redirecting…' : 'continue with github'}
+      {loading ? 'signing in…' : 'continue with github'}
     </button>
   )
 }
