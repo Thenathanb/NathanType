@@ -45,6 +45,8 @@ export function useTypingTest() {
     setContentLoading,
     setMemeLabel,
     setCurrentSong,
+    contentFormatType,
+    contentReloadKey,
   } = useTestStore();
 
   const {
@@ -325,7 +327,8 @@ export function useTypingTest() {
         }
 
         if (!cancelled && entry) {
-          setWords(entry.text.split(/\s+/).filter(Boolean));
+          const allWords = entry.text.split(/\s+/).filter(Boolean);
+          setWords(contentFormatType === 'words' ? allWords.slice(0, wordLimit) : allWords);
           setQuoteSource(entry.label);
           setMemeLabel(entry.label);
           setContentLoading(false);
@@ -337,7 +340,9 @@ export function useTypingTest() {
     })();
 
     return () => { cancelled = true; };
-  }, [mode, memeSubmode]);
+  // contentReloadKey increments on reset/cancel to reload fresh content
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, memeSubmode, contentReloadKey, contentFormatType, wordLimit]);
 
   // ── Songs mode loading (library) ─────────────────────────────
   useEffect(() => {
@@ -373,7 +378,8 @@ export function useTypingTest() {
           songSection === 'verse2' ? (song.sections.verse2 ?? song.sections.full) :
           song.sections.full;
 
-        setWords(sectionText.split(/\s+/).filter(Boolean));
+        const allWords = sectionText.split(/\s+/).filter(Boolean);
+        setWords(contentFormatType === 'words' ? allWords.slice(0, wordLimit) : allWords);
         setCurrentSong({ title: song.title, artist: song.artist, genre: songGenre, section: songSection, source: 'library' });
         setQuoteSource(`${song.title} — ${song.artist}`);
         setContentLoading(false);
@@ -384,7 +390,9 @@ export function useTypingTest() {
     })();
 
     return () => { cancelled = true; };
-  }, [mode, songGenre, songSection]);
+  // contentReloadKey increments on reset/cancel to reload fresh content
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, songGenre, songSection, contentReloadKey, contentFormatType, wordLimit]);
 
   // Zen mode: append more words when running low
   useEffect(() => {
@@ -396,9 +404,9 @@ export function useTypingTest() {
   }, [mode, isActive, currentWordIndex, words.length, punctuation, numbers]);
 
   // Keep a stable ref to mode/settings for use inside intervals
-  const settingsRef = useRef({ mode, timeLimit, wordLimit, punctuation, numbers, difficulty, activeFunbox });
+  const settingsRef = useRef({ mode, timeLimit, wordLimit, punctuation, numbers, difficulty, activeFunbox, contentFormatType });
   useEffect(() => {
-    settingsRef.current = { mode, timeLimit, wordLimit, punctuation, numbers, difficulty, activeFunbox };
+    settingsRef.current = { mode, timeLimit, wordLimit, punctuation, numbers, difficulty, activeFunbox, contentFormatType };
   });
 
   // ── Earthquake funbox: shuffle upcoming words every 3-5s ──────
@@ -440,9 +448,11 @@ export function useTypingTest() {
 
     const { typedHistory: th, wpmHistory: wh, startTime: st } = state;
     const s = settingsRef.current;
-    // For time mode use the exact limit as denominator so WPM doesn't drift from
-    // setInterval jitter. For other modes use the actual wall-clock end time.
-    const endTime = s.mode === 'time' ? st! + s.timeLimit * 1000 : Date.now();
+    // For time-based modes use the exact limit as the denominator so WPM doesn't
+    // drift from setInterval jitter. All other modes use the actual wall-clock end time.
+    const isTimeFormat = s.mode === 'time' ||
+      ((s.mode === 'meme' || s.mode === 'songs') && s.contentFormatType === 'time');
+    const endTime = isTimeFormat ? st! + s.timeLimit * 1000 : Date.now();
     const stats = calculateAllStats(th, wh, st!, endTime);
 
     const resultConfig = {
@@ -513,9 +523,11 @@ export function useTypingTest() {
   const handleTestCompleteRef = useRef(handleTestComplete);
   useEffect(() => { handleTestCompleteRef.current = handleTestComplete; });
 
-  // Timer for time mode
+  // Timer for time mode — also fires for meme/songs when format is time
   useEffect(() => {
-    if (mode === 'time' && isActive && !isComplete) {
+    const isTimeBased = mode === 'time' ||
+      ((mode === 'meme' || mode === 'songs') && contentFormatType === 'time');
+    if (isTimeBased && isActive && !isComplete) {
       timerRef.current = window.setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
@@ -527,7 +539,7 @@ export function useTypingTest() {
       }, 1000);
       return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }
-  }, [mode, isActive, isComplete]);
+  }, [mode, isActive, isComplete, contentFormatType]);
 
   // WPM tracker — reads fresh store values via getState() so interval is stable
   useEffect(() => {
@@ -554,16 +566,18 @@ export function useTypingTest() {
     }
   }, [isActive, isComplete]);
 
-  // Word mode / custom / quote end detection
+  // Word mode / custom / quote / meme-words / songs-words end detection
   useEffect(() => {
     if (!isActive || isComplete || mode === 'zen') return;
-    if ((mode === 'words' || mode === 'custom' || mode === 'quote') && currentWordIndex >= words.length) {
+    const isWordBased = mode === 'words' || mode === 'custom' || mode === 'quote' ||
+      ((mode === 'meme' || mode === 'songs') && contentFormatType === 'words');
+    if (isWordBased && currentWordIndex >= words.length) {
       handleTestComplete();
     }
     if (quickEnd && currentWordIndex === words.length - 1 && currentInput.length > 0) {
       handleTestComplete();
     }
-  }, [mode, currentWordIndex, words.length, currentInput, isActive, isComplete, quickEnd]);
+  }, [mode, currentWordIndex, words.length, currentInput, isActive, isComplete, quickEnd, contentFormatType]);
 
   const handleKeyPress = useCallback((key: string, isError = false) => {
     // Escape — cancel the test
@@ -683,6 +697,9 @@ export function useTypingTest() {
     // Content funboxes re-trigger via their own useEffect when resetTest fires
     if (activeFunbox && isContentFunbox(activeFunbox)) return;
 
+    // meme/songs/content reload via their loading useEffect (contentReloadKey incremented by resetTest)
+    if (mode === 'meme' || mode === 'songs' || mode === 'content') return;
+
     if (mode === 'quote') {
       import('../utils/wordGenerator').then(({ getQuote }) => {
         const { words: qWords, source } = getQuote('medium');
@@ -705,6 +722,8 @@ export function useTypingTest() {
     cancelTest();
     setCurrentInput('');
     setTimeRemaining(timeLimit);
+    // meme/songs/content reload via their loading useEffect (contentReloadKey incremented by cancelTest)
+    if (mode === 'meme' || mode === 'songs' || mode === 'content') return;
     const newWords = generateTestWords(mode, { wordLimit, timeLimit, punctuation, numbers });
     setWords(newWords);
   }, [mode, wordLimit, timeLimit, punctuation, numbers]);

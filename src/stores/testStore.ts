@@ -6,6 +6,12 @@ interface TestStore extends TestState {
   quoteSource: string | null;
   customText: string | null;
 
+  // Format control for meme/songs modes: 'time' or 'words'
+  contentFormatType: 'time' | 'words';
+  setContentFormatType: (t: 'time' | 'words') => void;
+  // Incremented by resetTest/cancelTest so meme/songs loading effects re-fire on restart
+  contentReloadKey: number;
+
   setMode: (mode: TestMode) => void;
   setTimeLimit: (timeLimit: number) => void;
   setWordLimit: (wordLimit: number) => void;
@@ -93,6 +99,8 @@ export const useTestStore = create<TestStore>()(
   currentSong: null,
   contentLoading: false,
   restartSignal: 0,
+  contentFormatType: 'words' as 'time' | 'words',
+  contentReloadKey: 0,
 
   setMode: (mode) => set({ mode }),
   setTimeLimit: (timeLimit) => set({ timeLimit }),
@@ -140,6 +148,8 @@ export const useTestStore = create<TestStore>()(
     songSection: state.songSection,
     currentSong: null,
     contentLoading: false,
+    contentFormatType: state.contentFormatType,
+    contentReloadKey: state.contentReloadKey + 1,
   })),
 
   resetTest: () => set((state) => ({
@@ -161,6 +171,8 @@ export const useTestStore = create<TestStore>()(
     songSection: state.songSection,
     currentSong: null,
     contentLoading: false,
+    contentFormatType: state.contentFormatType,
+    contentReloadKey: state.contentReloadKey + 1,
   })),
 
   setConfig: (config) => set((state) => ({
@@ -172,6 +184,7 @@ export const useTestStore = create<TestStore>()(
 
   setCurrentResult: (result, isNewPb = false) => set({ currentResult: result, isNewPersonalBest: isNewPb }),
   setXpResult: (result) => set({ xpResult: result }),
+  setContentFormatType: (contentFormatType) => set({ contentFormatType }),
   setContentCategory: (contentCategory) => set({ contentCategory }),
   setMemeSubmode: (memeSubmode) => set({ memeSubmode }),
   setMemeLabel: (memeLabel) => set({ memeLabel }),
@@ -198,6 +211,7 @@ export const useTestStore = create<TestStore>()(
         memeSubmode: state.memeSubmode,
         songGenre: state.songGenre,
         songSection: state.songSection,
+        contentFormatType: state.contentFormatType,
       }),
     }
   )

@@ -14,7 +14,7 @@ import type { SongData } from '../types/index.js';
 
 export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; onOpenSettings?: () => void }) {
   const { currentInput, timeRemaining, liveWpm, liveAccuracy, handleKeyPress, handleRestart } = useTypingTest();
-  const { isComplete, isActive, mode, timeLimit, setWords, setCurrentSong, setQuoteSource, restartSignal } = useTestStore();
+  const { isComplete, isActive, mode, timeLimit, setWords, setCurrentSong, setQuoteSource, restartSignal, contentFormatType } = useTestStore();
   const { showLiveWpm, showLiveAccuracy, showTimer } = useSettingsStore();
 
   const handleSongLoad = useCallback((words: string[], song: SongData) => {
@@ -123,8 +123,8 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
             )}
           </div>
 
-          {/* Timer (time mode) */}
-          {mode === 'time' && showTimer && (
+          {/* Timer (time mode and meme/songs time format) */}
+          {(mode === 'time' || ((mode === 'meme' || mode === 'songs') && contentFormatType === 'time')) && showTimer && (
             <div
               className={`font-mono tabular-nums transition-all duration-200 ${
                 isActive ? 'opacity-100' : 'opacity-60'

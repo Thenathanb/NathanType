@@ -12,7 +12,7 @@ const ACTIVE_BG = 'var(--bg-primary)';
 const ACTIVE_COLOR = 'var(--accent)';
 
 export function ModeSelector() {
-  const { mode, timeLimit, wordLimit, setMode, setTimeLimit, setWordLimit, setCustomText, isActive } = useTestStore();
+  const { mode, timeLimit, wordLimit, setMode, setTimeLimit, setWordLimit, setCustomText, contentFormatType, setContentFormatType, isActive } = useTestStore();
   const { punctuation, numbers, updateSettings } = useSettingsStore();
   const [showCustomModal, setShowCustomModal] = useState(false);
 
@@ -73,7 +73,7 @@ export function ModeSelector() {
           />
         ))}
 
-        {/* Group 3: count selectors */}
+        {/* Group 3: count selectors — time/words modes */}
         {(mode === 'time' || mode === 'words') && (
           <>
             <Divider />
@@ -83,6 +83,30 @@ export function ModeSelector() {
                 label={String(n)}
                 active={(mode === 'time' ? timeLimit : wordLimit) === n}
                 onClick={() => mode === 'time' ? setTimeLimit(n) : setWordLimit(n)}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Group 3: format selectors — meme/songs modes */}
+        {(mode === 'meme' || mode === 'songs') && (
+          <>
+            <Divider />
+            {timeLimits.map(n => (
+              <PillBtn
+                key={`t${n}`}
+                label={`${n}s`}
+                active={contentFormatType === 'time' && timeLimit === n}
+                onClick={() => { setContentFormatType('time'); setTimeLimit(n); }}
+              />
+            ))}
+            <Divider />
+            {wordLimits.map(n => (
+              <PillBtn
+                key={`w${n}`}
+                label={`${n}w`}
+                active={contentFormatType === 'words' && wordLimit === n}
+                onClick={() => { setContentFormatType('words'); setWordLimit(n); }}
               />
             ))}
           </>
