@@ -11,14 +11,10 @@ export function calculateWpm(
 ): number {
   if (timeElapsedMs === 0) return 0;
 
-  const correctChars = typedHistory.reduce((acc, word) => {
-    // Only count characters from fully correct words
-    const isWordCorrect = word.charStates.every(
-      (state) => state === 'correct'
-    ) && word.typed === word.word;
-
-    return acc + (isWordCorrect ? word.word.length : 0);
-  }, 0);
+  const correctChars = typedHistory.reduce(
+    (acc, word) => acc + word.charStates.filter(s => s === 'correct').length,
+    0
+  );
 
   const timeInMinutes = timeElapsedMs / 1000 / 60;
   return Math.round((correctChars / 5) / timeInMinutes);

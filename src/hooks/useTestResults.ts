@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export interface CachedTestResult {
@@ -24,16 +24,31 @@ const pending = new Map<string, Promise<CachedTestResult[]>>();
 // so the hook re-fetches without needing a uid change.
 const invalidateListeners = new Set<() => void>();
 
+function toTimestampMs(v: unknown): number {
+  if (typeof v === 'number') return v;
+  if (v && typeof (v as { toMillis?: () => number }).toMillis === 'function') {
+    return (v as { toMillis: () => number }).toMillis();
+  }
+  return 0;
+}
+
 function fetchFromFirestore(uid: string): Promise<CachedTestResult[]> {
   if (pending.has(uid)) return pending.get(uid)!;
 
-  const cutoff = Date.now() - FETCH_WINDOW_MS;
+  const cutoffMs = Date.now() - FETCH_WINDOW_MS;
   const p = getDocs(query(
     collection(db, 'testResults', uid, 'results'),
-    where('timestamp', '>=', cutoff),
+    where('timestamp', '>=', Timestamp.fromMillis(cutoffMs)),
     orderBy('timestamp', 'desc'),
   )).then(snap => {
-    const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as CachedTestResult));
+    const results = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        timestamp: toTimestampMs(data.timestamp),
+      } as CachedTestResult;
+    });
     resultCache.set(uid, { results, fetchedAt: Date.now() });
     pending.delete(uid);
     return results;

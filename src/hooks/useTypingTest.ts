@@ -434,15 +434,17 @@ export function useTypingTest() {
     const state = useTestStore.getState();
     if (!state.startTime) return;
 
-    const endTime = Date.now();
     if (timerRef.current) clearInterval(timerRef.current);
     if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current);
     state.endTest();
 
     const { typedHistory: th, wpmHistory: wh, startTime: st } = state;
+    const s = settingsRef.current;
+    // For time mode use the exact limit as denominator so WPM doesn't drift from
+    // setInterval jitter. For other modes use the actual wall-clock end time.
+    const endTime = s.mode === 'time' ? st! + s.timeLimit * 1000 : Date.now();
     const stats = calculateAllStats(th, wh, st!, endTime);
 
-    const s = settingsRef.current;
     const resultConfig = {
       mode: s.mode,
       timeLimit: s.timeLimit,
