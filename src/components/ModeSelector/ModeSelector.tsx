@@ -12,7 +12,7 @@ const ACTIVE_BG = 'var(--bg-primary)';
 const ACTIVE_COLOR = 'var(--accent)';
 
 export function ModeSelector() {
-  const { mode, timeLimit, wordLimit, setMode, setTimeLimit, setWordLimit, setCustomText, contentFormatType, setContentFormatType, isActive } = useTestStore();
+  const { mode, timeLimit, wordLimit, setMode, setTimeLimit, setWordLimit, setCustomText, isActive } = useTestStore();
   const { punctuation, numbers, updateSettings } = useSettingsStore();
   const [showCustomModal, setShowCustomModal] = useState(false);
 
@@ -22,14 +22,11 @@ export function ModeSelector() {
   const wordLimits = [10, 25, 50, 100];
 
   const modes: { value: TestMode; label: string; icon: React.ReactNode }[] = [
-    { value: 'time',    label: 'time',    icon: <IconClock /> },
-    { value: 'words',   label: 'words',   icon: <IconText /> },
-    { value: 'quote',   label: 'quote',   icon: <IconQuote /> },
-    { value: 'zen',     label: 'zen',     icon: <IconLeaf /> },
-    { value: 'custom',  label: 'custom',  icon: <IconPencil /> },
-    { value: 'content', label: 'content', icon: <IconBook /> },
-    { value: 'meme',    label: 'meme',    icon: <IconFire /> },
-    { value: 'songs',   label: 'songs',   icon: <IconMusic /> },
+    { value: 'time',   label: 'time',   icon: <IconClock /> },
+    { value: 'words',  label: 'words',  icon: <IconText /> },
+    { value: 'quote',  label: 'quote',  icon: <IconQuote /> },
+    { value: 'zen',    label: 'zen',    icon: <IconLeaf /> },
+    { value: 'custom', label: 'custom', icon: <IconPencil /> },
   ];
 
   const handleModeClick = (m: TestMode) => {
@@ -88,29 +85,6 @@ export function ModeSelector() {
           </>
         )}
 
-        {/* Group 3: format selectors — meme/songs modes */}
-        {(mode === 'meme' || mode === 'songs') && (
-          <>
-            <Divider />
-            {timeLimits.map(n => (
-              <PillBtn
-                key={`t${n}`}
-                label={`${n}s`}
-                active={contentFormatType === 'time' && timeLimit === n}
-                onClick={() => { setContentFormatType('time'); setTimeLimit(n); }}
-              />
-            ))}
-            <Divider />
-            {wordLimits.map(n => (
-              <PillBtn
-                key={`w${n}`}
-                label={`${n}w`}
-                active={contentFormatType === 'words' && wordLimit === n}
-                onClick={() => { setContentFormatType('words'); setWordLimit(n); }}
-              />
-            ))}
-          </>
-        )}
       </div>
 
       <CustomTextModal

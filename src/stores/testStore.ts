@@ -213,6 +213,12 @@ export const useTestStore = create<TestStore>()(
         songSection: state.songSection,
         contentFormatType: state.contentFormatType,
       }),
+      // Reset legacy modes that are no longer accessible from the UI
+      onRehydrateStorage: () => (state) => {
+        if (state && (['meme', 'songs', 'content'] as string[]).includes(state.mode)) {
+          state.mode = 'time';
+        }
+      },
     }
   )
 );

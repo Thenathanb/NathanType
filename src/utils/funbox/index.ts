@@ -4,6 +4,12 @@ import {
   applyMorse, applyBinary, applyHex, applyAscii,
   applyRot13, generateGibberish,
 } from './transforms';
+import { classicBrainrotWords } from '../../data/words/classic-brainrot';
+import { characterBrainrotWords } from '../../data/words/character-brainrot';
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 export { applyMirror } from './transforms';
 
@@ -30,7 +36,9 @@ export function getActiveFunboxWords(
     case 'hexadecimal':  return applyHex(baseWords);
     case 'ascii':        return applyAscii(baseWords);
     case 'rot13':        return applyRot13(baseWords);
-    case 'gibberish':    return generateGibberish(baseWords.length);
+    case 'gibberish':         return generateGibberish(baseWords.length);
+    case 'classic-brainrot':  return baseWords.map(() => pickRandom(classicBrainrotWords));
+    case 'character-brainrot': return baseWords.map(() => pickRandom(characterBrainrotWords));
     // nospace: words are passed through unchanged; the UI hides spaces
     case 'nospace':      return baseWords;
     // visual/behavioral challenge funboxes don't change the word list

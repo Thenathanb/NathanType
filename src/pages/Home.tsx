@@ -1,27 +1,16 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { TypingArea } from '../components/TypingArea/TypingArea';
 import { ModeSelector } from '../components/ModeSelector/ModeSelector';
 import { ResultsDisplay } from '../components/Results/ResultsDisplay';
-import { ContentModeSelector } from '../components/ContentMode/ContentModeSelector';
-import { MemeModeSelector } from '../components/MemeMode/MemeModeSelector';
-import { SongsModeSelector } from '../components/SongsMode/SongsModeSelector';
-import { SongHeader } from '../components/SongsMode/SongHeader';
 import { useTypingTest } from '../hooks/useTypingTest';
 import { useTestStore } from '../stores/testStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { FunboxBadge } from '../components/Funbox/FunboxBadge';
-import type { SongData } from '../types/index.js';
 
 export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; onOpenSettings?: () => void }) {
   const { currentInput, timeRemaining, liveWpm, liveAccuracy, handleKeyPress, handleRestart } = useTypingTest();
-  const { isComplete, isActive, mode, timeLimit, setWords, setCurrentSong, setQuoteSource, restartSignal, contentFormatType } = useTestStore();
+  const { isComplete, isActive, mode, timeLimit, restartSignal } = useTestStore();
   const { showLiveWpm, showLiveAccuracy, showTimer } = useSettingsStore();
-
-  const handleSongLoad = useCallback((words: string[], song: SongData) => {
-    setWords(words);
-    setCurrentSong(song);
-    setQuoteSource(`${song.title} — ${song.artist}`);
-  }, [setWords, setCurrentSong, setQuoteSource]);
 
   const prevSignal = useRef(restartSignal);
   useEffect(() => {
@@ -71,32 +60,11 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
             }} />
           </div>
 
-          {/* Secondary selectors for new modes */}
-          {mode === 'content' && (
-            <div style={{ marginBottom: 16 }}>
-              <ContentModeSelector />
-            </div>
-          )}
-          {mode === 'meme' && (
-            <div style={{ marginBottom: 16 }}>
-              <MemeModeSelector />
-            </div>
-          )}
-          {mode === 'songs' && (
-            <div className="w-full flex justify-center" style={{ marginBottom: 16, maxWidth: 680 }}>
-              <SongsModeSelector onSongLoad={handleSongLoad} />
-            </div>
-          )}
-
-          {mode === 'songs' && <SongHeader />}
-
-          {/* Language selector */}
-          {mode !== 'content' && mode !== 'meme' && mode !== 'songs' && (
-            <div className="flex items-center gap-1.5" style={{ color: 'var(--sub)', fontSize: 13, marginBottom: 32 }}>
-              <IconGlobe />
-              <span className="font-mono">english</span>
-            </div>
-          )}
+          {/* Language indicator */}
+          <div className="flex items-center gap-1.5" style={{ color: 'var(--sub)', fontSize: 13, marginBottom: 32 }}>
+            <IconGlobe />
+            <span className="font-mono">english</span>
+          </div>
 
           {/* Live stats */}
           <div
@@ -123,8 +91,8 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
             )}
           </div>
 
-          {/* Timer (time mode and meme/songs time format) */}
-          {(mode === 'time' || ((mode === 'meme' || mode === 'songs') && contentFormatType === 'time')) && showTimer && (
+          {/* Timer (time mode) */}
+          {mode === 'time' && showTimer && (
             <div
               className={`font-mono tabular-nums transition-all duration-200 ${
                 isActive ? 'opacity-100' : 'opacity-60'

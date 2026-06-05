@@ -24,6 +24,11 @@ export const MUSIC_FUNBOXES = [
   'spotify', 'apple-music', 'soundcloud',
 ];
 
+// Word-pool funboxes: replace the word dictionary with a themed vocabulary (synchronous)
+export const WORD_POOL_FUNBOXES = [
+  'classic-brainrot', 'character-brainrot',
+];
+
 // Transform funboxes: modify words in-place (pure, synchronous)
 export const TRANSFORM_FUNBOXES = [
   'backwards', 'all-caps', 'random-case', 'nospace', 'plus-zero', 'plus-one',
@@ -48,6 +53,8 @@ export const allFunboxes: FunboxOption[] = [
   { id: 'wikipedia',      name: 'wikipedia',       description: 'Type the opening paragraph of a random Wikipedia article.',          category: 'content',   icon: '📡' },
 
   // ── MEME ───────────────────────────────────────────────────────
+  { id: 'classic-brainrot',   name: 'classic brainrot',   description: 'Replace words with gen alpha slang, streamer vocab, and brainrot terminology.',    category: 'meme', icon: '🗣️' },
+  { id: 'character-brainrot', name: 'character brainrot', description: 'Replace words with iconic character names from anime, games, and pop culture.',      category: 'meme', icon: '⚔️' },
   { id: 'brainrot',       name: 'brainrot',        description: 'Type general brainrot and internet culture text.',                   category: 'meme',      icon: '🧠' },
   { id: 'italian-brainrot', name: 'italian brainrot', description: 'Type the lore of Bombardino, Tralalero and friends.',            category: 'meme',      icon: '🇮🇹' },
   { id: 'characters',     name: 'characters',      description: 'Type monologues from famous internet characters.',                   category: 'meme',      icon: '👤' },
