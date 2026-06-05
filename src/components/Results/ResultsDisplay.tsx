@@ -9,7 +9,6 @@ import { XpPanel } from './XpPanel';
 import { SecondaryStats } from './SecondaryStats';
 import { ActionIcons } from './ActionIcons';
 import { WordsHistory } from './WordsHistory';
-import { MemeReaction } from '../MemeMode/MemeReaction';
 
 interface ResultsDisplayProps {
   onRestart: () => void;
@@ -105,13 +104,6 @@ export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps) {
 
       {/* Secondary stats row */}
       <SecondaryStats stats={stats} timestamp={mountedAt.current} />
-
-      {/* Meme reaction */}
-      {mode === 'meme' && (
-        <div style={{ marginTop: 20 }}>
-          <MemeReaction wpm={stats.wpm} />
-        </div>
-      )}
 
       {/* Song credit */}
       {mode === 'songs' && currentSong && (
