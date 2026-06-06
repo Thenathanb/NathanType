@@ -241,7 +241,9 @@ export function useTypingTest() {
     })();
 
     return () => { cancelled = true; };
-  }, [activeFunbox]);
+  // contentReloadKey increments on reset/cancel so fresh content loads after every test
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFunbox, contentReloadKey]);
 
   // ── Content mode loading ─────────────────────────────────────
   useEffect(() => {
