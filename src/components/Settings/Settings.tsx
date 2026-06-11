@@ -47,7 +47,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
           </Section>
 
           {/* Funbox */}
-          <Section title="🎮 funbox">
+          <Section title="funbox">
             <FunboxGrid />
           </Section>
 

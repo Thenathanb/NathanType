@@ -1,12 +1,12 @@
 import { useTestStore } from '../../stores/testStore';
 import type { MemeSubmode } from '../../types/index.js';
 
-const SUBMODES: { value: MemeSubmode; label: string; emoji: string }[] = [
-  { value: 'brainrot',   label: 'brainrot',   emoji: '🧠' },
-  { value: 'classics',   label: 'classics',   emoji: '🐸' },
-  { value: 'genz',       label: 'gen z',      emoji: '💀' },
-  { value: 'italian',    label: 'italian',    emoji: '🇮🇹' },
-  { value: 'characters', label: 'characters', emoji: '👤' },
+const SUBMODES: { value: MemeSubmode; label: string }[] = [
+  { value: 'brainrot',   label: 'brainrot' },
+  { value: 'classics',   label: 'classics' },
+  { value: 'genz',       label: 'gen z' },
+  { value: 'italian',    label: 'italian' },
+  { value: 'characters', label: 'characters' },
 ];
 
 export function MemeModeSelector() {
@@ -30,7 +30,6 @@ export function MemeModeSelector() {
           onMouseEnter={e => { if (memeSubmode !== s.value) e.currentTarget.style.color = '#d1d0ce'; }}
           onMouseLeave={e => { if (memeSubmode !== s.value) e.currentTarget.style.color = '#646669'; }}
         >
-          <span>{s.emoji}</span>
           <span>{s.label}</span>
         </button>
       ))}

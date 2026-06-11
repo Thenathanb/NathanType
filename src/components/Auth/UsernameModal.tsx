@@ -14,7 +14,7 @@ type Status = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'check-f
 const STATUS_TEXT: Record<Status, string> = {
   idle: '',
   checking: 'checking…',
-  available: 'available ✓',
+  available: 'available',
   taken: 'already taken',
   invalid: '3–20 chars, letters numbers and _ only',
   'check-failed': '',   // allow submit anyway; server will catch real duplicates

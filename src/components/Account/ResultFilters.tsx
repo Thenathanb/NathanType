@@ -43,8 +43,8 @@ export function ResultFilters({ open, onToggle, timeRange, onTimeRange, modeFilt
             {MODE_OPTS.map(o => (
               <FilterPill key={o.value} active={modeFilter === o.value} onClick={() => onModeFilter(o.value)}>{o.label}</FilterPill>
             ))}
-            <FilterPill active={false} onClick={() => toast('coming soon', { icon: '🔜' })}>advanced</FilterPill>
-            <FilterPill active={false} onClick={() => toast('coming soon', { icon: '🔜' })}>save as preset</FilterPill>
+            <FilterPill active={false} onClick={() => toast('coming soon')}>advanced</FilterPill>
+            <FilterPill active={false} onClick={() => toast('coming soon')}>save as preset</FilterPill>
           </FilterRow>
           <FilterRow>
             {TIME_OPTS.map(o => (

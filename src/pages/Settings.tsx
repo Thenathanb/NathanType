@@ -16,16 +16,15 @@ type TabId = 'behavior' | 'appearance' | 'theme' | 'sound' | 'funbox' | 'danger'
 interface Tab {
   id: TabId;
   label: string;
-  emoji: string;
 }
 
 const TABS: Tab[] = [
-  { id: 'behavior',   label: 'Behavior',    emoji: '⚙️' },
-  { id: 'appearance', label: 'Appearance',  emoji: '🎨' },
-  { id: 'theme',      label: 'Theme',       emoji: '🖌️' },
-  { id: 'sound',      label: 'Sound',       emoji: '🔊' },
-  { id: 'funbox',     label: 'Funbox',      emoji: '🎲' },
-  { id: 'danger',     label: 'Danger Zone', emoji: '⚠️' },
+  { id: 'behavior',   label: 'Behavior' },
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'theme',      label: 'Theme' },
+  { id: 'sound',      label: 'Sound' },
+  { id: 'funbox',     label: 'Funbox' },
+  { id: 'danger',     label: 'Danger Zone' },
 ];
 
 // ── Shared primitives ────────────────────────────────────────────
@@ -450,7 +449,6 @@ export function Settings() {
                 onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'var(--text)'; }}
                 onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'var(--sub)'; }}
               >
-                <span>{tab.emoji}</span>
                 <span>{tab.label}</span>
               </button>
             ))}

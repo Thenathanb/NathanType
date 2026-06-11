@@ -3,11 +3,11 @@ interface MemeReactionProps {
 }
 
 const REACTIONS = [
-  { max: 30,  text: 'you cooked but slowly 🧑‍🍳' },
-  { max: 50,  text: 'solid drip no cap 💧' },
-  { max: 70,  text: 'based and sigma pilled 📈' },
-  { max: 90,  text: 'you are built different fr fr 🔥' },
-  { max: Infinity, text: 'GYATT. absolute unit. no shot you typed that 💀' },
+  { max: 30,  text: 'you cooked but slowly' },
+  { max: 50,  text: 'solid drip no cap' },
+  { max: 70,  text: 'based and sigma pilled' },
+  { max: 90,  text: 'you are built different fr fr' },
+  { max: Infinity, text: 'GYATT. absolute unit. no shot you typed that' },
 ];
 
 export function MemeReaction({ wpm }: MemeReactionProps) {

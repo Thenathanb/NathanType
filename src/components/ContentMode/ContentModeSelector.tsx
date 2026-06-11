@@ -1,12 +1,12 @@
 import { useTestStore } from '../../stores/testStore';
 import type { ContentCategory } from '../../types/index.js';
 
-const CATEGORIES: { value: ContentCategory; label: string; emoji: string }[] = [
-  { value: 'books',    label: 'books',    emoji: '📖' },
-  { value: 'messages', label: 'messages', emoji: '✉️' },
-  { value: 'news',     label: 'news',     emoji: '📰' },
-  { value: 'history',  label: 'history',  emoji: '🏛️' },
-  { value: 'facts',    label: 'facts',    emoji: '🧠' },
+const CATEGORIES: { value: ContentCategory; label: string }[] = [
+  { value: 'books',    label: 'books' },
+  { value: 'messages', label: 'messages' },
+  { value: 'news',     label: 'news' },
+  { value: 'history',  label: 'history' },
+  { value: 'facts',    label: 'facts' },
 ];
 
 export function ContentModeSelector() {
@@ -30,7 +30,6 @@ export function ContentModeSelector() {
           onMouseEnter={e => { if (contentCategory !== c.value) e.currentTarget.style.color = '#d1d0ce'; }}
           onMouseLeave={e => { if (contentCategory !== c.value) e.currentTarget.style.color = '#646669'; }}
         >
-          <span>{c.emoji}</span>
           <span>{c.label}</span>
         </button>
       ))}
