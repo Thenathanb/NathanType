@@ -53,6 +53,18 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
 
           {/* Appearance */}
           <Section title="Appearance">
+            <OptionRow label="Word Display">
+              <ButtonGroup
+                options={['scroll', 'multi'] as const}
+                value={settings.wordDisplay}
+                onChange={(v) => settings.updateSettings({ wordDisplay: v })}
+              />
+            </OptionRow>
+            <div className="font-mono mt-1 mb-3" style={{ color: 'var(--sub)', fontSize: 12 }}>
+              {settings.wordDisplay === 'scroll' && 'Single row — words scroll horizontally as you type'}
+              {settings.wordDisplay === 'multi' && 'Multiple rows — words wrap and rows scroll vertically'}
+            </div>
+
             <OptionRow label="Font Size">
               <ButtonGroup
                 options={['small', 'medium', 'large', 'extra-large'] as const}

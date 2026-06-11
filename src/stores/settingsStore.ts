@@ -46,6 +46,9 @@ const defaultSettings: Settings & { fontId: string; activeFunbox: string | null;
   // Difficulty
   difficulty: 'normal',
 
+  // Layout
+  wordDisplay: 'multi',
+
   // Funbox
   activeFunbox: null,
 

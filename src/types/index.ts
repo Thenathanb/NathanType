@@ -142,6 +142,9 @@ export interface Settings {
 
   // Difficulty
   difficulty: 'normal' | 'expert' | 'master';
+
+  // Layout
+  wordDisplay: 'scroll' | 'multi';
 }
 
 // XP result returned after a test is saved to Firestore
