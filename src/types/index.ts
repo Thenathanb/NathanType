@@ -145,6 +145,9 @@ export interface Settings {
 
   // Layout
   wordDisplay: 'scroll' | 'multi';
+
+  // Favorites
+  favoriteThemes: string[];
 }
 
 // XP result returned after a test is saved to Firestore

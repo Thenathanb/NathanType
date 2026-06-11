@@ -49,6 +49,9 @@ const defaultSettings: Settings & { fontId: string; activeFunbox: string | null;
   // Layout
   wordDisplay: 'multi',
 
+  // Favorites
+  favoriteThemes: [],
+
   // Funbox
   activeFunbox: null,
 

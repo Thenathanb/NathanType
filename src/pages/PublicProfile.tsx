@@ -7,7 +7,6 @@ import { getPbEntry, getStreakLength, getAddedAt } from '../context/AuthContext'
 import { ActivityHeatmap } from '../components/Account/ActivityHeatmap';
 import { useAuth } from '../context/AuthContext';
 
-// Re-use the same PB grid but read-only from passed profile
 function PersonalBestsReadOnly({ profile }: { profile: UserProfile }) {
   const timeKeys = [
     { mode2: '15', label: '15s' }, { mode2: '30', label: '30s' },
@@ -18,20 +17,20 @@ function PersonalBestsReadOnly({ profile }: { profile: UserProfile }) {
     { mode2: '50', label: '50' }, { mode2: '100', label: '100' },
   ];
   const Card = ({ title, cols, modeType }: { title: string; cols: { mode2: string; label: string }[]; modeType: 'time' | 'words' }) => (
-    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: '#323437' }}>
-      <div style={{ color: '#646669', fontSize: 13, marginBottom: 16 }}>{title}</div>
+    <div className="rounded-xl p-5 font-mono" style={{ backgroundColor: 'var(--bg2)' }}>
+      <div style={{ color: 'var(--sub)', fontSize: 13, marginBottom: 16 }}>{title}</div>
       <div className="grid grid-cols-4 gap-3">
         {cols.map(c => {
-          const pb = getPbEntry(profile, modeType, c.mode2)
-          const wpm = pb?.wpm ?? 0
+          const pb = getPbEntry(profile, modeType, c.mode2);
+          const wpm = pb?.wpm ?? 0;
           return (
             <div key={c.mode2} className="text-center">
-              <div style={{ color: '#646669', fontSize: 11, marginBottom: 4 }}>{c.label}</div>
-              <div style={{ color: wpm > 0 ? '#d1d0ce' : '#3a3c3f', fontSize: 26, fontWeight: 500 }}>
+              <div style={{ color: 'var(--sub)', fontSize: 11, marginBottom: 4 }}>{c.label}</div>
+              <div style={{ color: wpm > 0 ? 'var(--text)' : 'var(--bg2)', fontSize: 26, fontWeight: 500 }}>
                 {wpm > 0 ? wpm : '—'}
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </div>
@@ -60,9 +59,9 @@ export function PublicProfile() {
     }).catch(console.error).finally(() => setLoading(false));
   }, [username]);
 
-  if (loading) return <div className="flex-1 flex items-center justify-center font-mono" style={{ color: '#646669' }}>loading…</div>;
+  if (loading) return <div className="flex-1 flex items-center justify-center font-mono" style={{ color: 'var(--sub)' }}>loading…</div>;
   if (notFound || !profile) return (
-    <div className="flex-1 flex items-center justify-center font-mono" style={{ color: '#646669', fontSize: 18 }}>user not found</div>
+    <div className="flex-1 flex items-center justify-center font-mono" style={{ color: 'var(--sub)', fontSize: 18 }}>user not found</div>
   );
 
   const displayName = profile.username || profile.displayName;
@@ -77,33 +76,33 @@ export function PublicProfile() {
       <div className="w-full max-w-4xl mx-auto px-5 py-8 flex flex-col gap-4 font-mono" style={{ animation: 'fadeIn 0.2s ease-out' }}>
 
         {isOwnProfile && (
-          <div className="rounded px-3 py-2 text-center" style={{ backgroundColor: 'rgba(226,183,20,0.1)', color: '#e2b714', fontSize: 12 }}>
+          <div className="rounded px-3 py-2 text-center" style={{ backgroundColor: 'color-mix(in srgb, var(--main) 10%, transparent)', color: 'var(--main)', fontSize: 12 }}>
             this is your public profile — visible to everyone
           </div>
         )}
 
         {/* Header */}
-        <div className="rounded-xl p-6" style={{ backgroundColor: '#323437' }}>
+        <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--bg2)' }}>
           <div className="flex items-start gap-5">
             {profile.photoURL ? (
               <img src={profile.photoURL} alt="avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
             ) : (
               <div className="flex items-center justify-center font-mono font-medium shrink-0"
-                style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: '#e2b714', color: '#2c2e31', fontSize: 28 }}>{initials}</div>
+                style={{ width: 72, height: 72, borderRadius: '50%', backgroundColor: 'var(--main)', color: 'var(--bg)', fontSize: 28 }}>{initials}</div>
             )}
             <div className="flex-1">
-              <div style={{ color: '#d1d0ce', fontSize: 22, fontWeight: 500 }}>{displayName}</div>
-              <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>joined {fmtDate(getAddedAt(profile))}</div>
+              <div style={{ color: 'var(--text)', fontSize: 22, fontWeight: 500 }}>{displayName}</div>
+              <div style={{ color: 'var(--sub)', fontSize: 13, marginTop: 2 }}>joined {fmtDate(getAddedAt(profile))}</div>
               {getStreakLength(profile) > 0 && (
-                <div style={{ color: '#646669', fontSize: 13, marginTop: 2 }}>{getStreakLength(profile)} day streak</div>
+                <div style={{ color: 'var(--sub)', fontSize: 13, marginTop: 2 }}>{getStreakLength(profile)} day streak</div>
               )}
               <div className="mt-3" style={{ maxWidth: 280 }}>
                 <div className="flex justify-between mb-1" style={{ fontSize: 12 }}>
-                  <span style={{ color: '#e2b714' }}>level {profile.level}</span>
-                  <span style={{ color: '#646669' }}>{profile.xp} / {profile.xpToNextLevel} xp</span>
+                  <span style={{ color: 'var(--main)' }}>level {profile.level}</span>
+                  <span style={{ color: 'var(--sub)' }}>{profile.xp} / {profile.xpToNextLevel} xp</span>
                 </div>
-                <div style={{ height: 4, backgroundColor: 'rgba(100,102,105,0.3)', borderRadius: 2 }}>
-                  <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: '#e2b714', borderRadius: 2 }} />
+                <div style={{ height: 4, backgroundColor: 'color-mix(in srgb, var(--sub) 30%, transparent)', borderRadius: 2 }}>
+                  <div style={{ height: '100%', width: `${xpPct}%`, backgroundColor: 'var(--main)', borderRadius: 2 }} />
                 </div>
               </div>
             </div>
@@ -112,7 +111,6 @@ export function PublicProfile() {
 
         <PersonalBestsReadOnly profile={profile} />
 
-        {/* Heatmap only shown for own profile (requires auth for subcollection read) */}
         {isOwnProfile && <ActivityHeatmap />}
 
       </div>

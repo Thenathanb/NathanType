@@ -12,7 +12,7 @@ const ACTIVE_BG = 'var(--bg-primary)';
 const ACTIVE_COLOR = 'var(--accent)';
 
 export function ModeSelector() {
-  const { mode, timeLimit, wordLimit, setMode, setTimeLimit, setWordLimit, setCustomText, isActive } = useTestStore();
+  const { mode, timeLimit, wordLimit, setMode, setTimeLimit, setWordLimit, setCustomText, isActive, contentFormatType, setContentFormatType } = useTestStore();
   const { punctuation, numbers, updateSettings } = useSettingsStore();
   const [showCustomModal, setShowCustomModal] = useState(false);
 
@@ -70,7 +70,7 @@ export function ModeSelector() {
           />
         ))}
 
-        {/* Group 3: count selectors — time/words modes */}
+        {/* Group 3: count selectors */}
         {(mode === 'time' || mode === 'words') && (
           <>
             <Divider />
@@ -82,6 +82,41 @@ export function ModeSelector() {
                 onClick={() => mode === 'time' ? setTimeLimit(n) : setWordLimit(n)}
               />
             ))}
+          </>
+        )}
+
+        {/* Group 3b: word count for meme/songs/content modes */}
+        {(mode === 'meme' || mode === 'songs' || mode === 'content') && (
+          <>
+            <Divider />
+            <PillBtn label="time" active={contentFormatType === 'time'} onClick={() => setContentFormatType('time')} />
+            <PillBtn label="words" active={contentFormatType === 'words'} onClick={() => setContentFormatType('words')} />
+            {contentFormatType === 'words' && (
+              <>
+                <Divider />
+                {wordLimits.map(n => (
+                  <PillBtn
+                    key={n}
+                    label={String(n)}
+                    active={wordLimit === n}
+                    onClick={() => setWordLimit(n)}
+                  />
+                ))}
+              </>
+            )}
+            {contentFormatType === 'time' && (
+              <>
+                <Divider />
+                {timeLimits.map(n => (
+                  <PillBtn
+                    key={n}
+                    label={String(n)}
+                    active={timeLimit === n}
+                    onClick={() => setTimeLimit(n)}
+                  />
+                ))}
+              </>
+            )}
           </>
         )}
 

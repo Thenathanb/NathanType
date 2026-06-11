@@ -172,7 +172,7 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
   const containerHeight = isMulti ? lineHeight * VISIBLE_ROWS : fontSizePx * 2;
 
   return (
-    <div style={{ width: isMulti ? '750px' : '680px', maxWidth: '90vw' }}>
+    <div style={{ width: isMulti ? '1000px' : '1000px', maxWidth: '90vw' }}>
       <input
         ref={inputRef}
         type="text"
