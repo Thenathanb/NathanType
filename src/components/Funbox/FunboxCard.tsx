@@ -46,7 +46,6 @@ export function FunboxCard({ funbox, active, onClick }: FunboxCardProps) {
         }
       }}
     >
-      <span style={{ fontSize: 15, flexShrink: 0 }}>{funbox.icon}</span>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{funbox.name}</span>
       {funbox.requiresSetup && (
         <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.6, flexShrink: 0 }}>setup</span>

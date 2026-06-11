@@ -30,8 +30,6 @@ export function FunboxBadge({ onOpenSettings }: FunboxBadgeProps) {
         userSelect: 'none',
       }}
     >
-      <span style={{ fontSize: 13 }}>{funbox.icon}</span>
-
       <button
         onClick={onOpenSettings}
         style={{
