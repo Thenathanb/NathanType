@@ -16,7 +16,7 @@ interface ResultsDisplayProps {
 }
 
 export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps) {
-  const { currentResult, isNewPersonalBest, mode, xpResult, currentSong } = useTestStore();
+  const { currentResult, isNewPersonalBest, mode, xpResult, currentSong, failReason } = useTestStore();
   const { currentUser, userProfile } = useAuth();
   const { activeFunbox } = useSettingsStore();
   const [levelUpDismissed, setLevelUpDismissed] = useState(false);
@@ -54,6 +54,22 @@ export function ResultsDisplay({ onRestart, onOpenAuth }: ResultsDisplayProps) {
         animation: 'fadeIn 0.2s ease-out',
       }}
     >
+      {/* Fail reason banner */}
+      {failReason && (
+        <div style={{
+          backgroundColor: 'color-mix(in srgb, var(--error) 15%, var(--bg2))',
+          border: '1px solid color-mix(in srgb, var(--error) 40%, transparent)',
+          padding: '8px 16px',
+          borderRadius: 8,
+          marginBottom: 16,
+          fontSize: 13,
+          color: 'var(--error)',
+          fontFamily: 'inherit',
+        }}>
+          failed — {failReason === 'min-speed' ? 'speed fell below minimum wpm' : 'accuracy fell below minimum'}
+        </div>
+      )}
+
       {/* Sign-in nudge */}
       {!currentUser && (
         <div style={{

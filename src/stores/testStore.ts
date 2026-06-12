@@ -54,6 +54,8 @@ interface TestStore extends TestState {
   setContentLoading: (loading: boolean) => void;
   restartSignal: number;
   triggerRestart: () => void;
+  failReason: 'min-speed' | 'min-accuracy' | null;
+  setFailReason: (reason: 'min-speed' | 'min-accuracy' | null) => void;
 }
 
 const defaultConfig: TestConfig = {
@@ -91,6 +93,7 @@ export const useTestStore = create<TestStore>()(
   isNewPersonalBest: false,
   wpmHistory: [],
   xpResult: null,
+  failReason: null,
   contentCategory: 'books',
   memeSubmode: 'brainrot',
   memeLabel: null,
@@ -139,6 +142,7 @@ export const useTestStore = create<TestStore>()(
     currentResult: null,
     isNewPersonalBest: false,
     xpResult: null,
+    failReason: null,
     memeLabel: null,
     quoteSource: state.quoteSource,
     customText: state.customText,
@@ -162,6 +166,7 @@ export const useTestStore = create<TestStore>()(
     currentResult: null,
     isNewPersonalBest: false,
     xpResult: null,
+    failReason: null,
     memeLabel: null,
     quoteSource: null,
     customText: state.customText,
@@ -182,6 +187,7 @@ export const useTestStore = create<TestStore>()(
   setQuoteSource: (source) => set({ quoteSource: source }),
   setCustomText: (text) => set({ customText: text }),
 
+  setFailReason: (reason) => set({ failReason: reason }),
   setCurrentResult: (result, isNewPb = false) => set({ currentResult: result, isNewPersonalBest: isNewPb }),
   setXpResult: (result) => set({ xpResult: result }),
   setContentFormatType: (contentFormatType) => set({ contentFormatType }),

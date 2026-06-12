@@ -573,8 +573,14 @@ export function useTypingTest() {
         // End test (show results) if below min thresholds (only after 3s)
         const { minSpeedEnabled: mse, minSpeed: ms, minAccuracyEnabled: mae, minAccuracy: ma } = useSettingsStore.getState();
         if (elapsed >= 3000) {
-          if (mse && currentWpm > 0 && currentWpm < ms) { handleTestCompleteRef.current(); return; }
-          if (mae && th.length >= 3 && currentAcc < ma) { handleTestCompleteRef.current(); return; }
+          if (mse && currentWpm > 0 && currentWpm < ms) {
+            useTestStore.getState().setFailReason('min-speed');
+            handleTestCompleteRef.current(); return;
+          }
+          if (mae && th.length >= 3 && currentAcc < ma) {
+            useTestStore.getState().setFailReason('min-accuracy');
+            handleTestCompleteRef.current(); return;
+          }
         }
       }, 1000);
       return () => { if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current); };
