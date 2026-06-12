@@ -31,4 +31,11 @@ export function applyTheme(theme: NTTheme) {
       text: theme.text, sub: theme.sub, error: theme.error,
     }));
   } catch (_) { /* storage unavailable */ }
+
+  // Update favicon to match theme
+  try {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="${theme.bg2}"/><text x="16" y="23" font-family="'Courier New',monospace" font-size="18" font-weight="700" text-anchor="middle" fill="${theme.main}">nt</text></svg>`;
+    const el = document.getElementById('favicon') as HTMLLinkElement | null;
+    if (el) el.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+  } catch (_) {}
 }
