@@ -34,7 +34,7 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
   return (
     <div
       className="flex-1 flex flex-col items-center"
-      style={{ paddingTop: 180 }}
+      style={{ paddingTop: 'max(160px, 18vh)', paddingBottom: '10vh' }}
       onClick={(e) => {
         const target = e.target as HTMLElement;
         if (target.tagName !== 'BUTTON' && !target.closest('button') && !isComplete) {

@@ -35,10 +35,10 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
   const [caretVisible, setCaretVisible] = useState(true);
 
   const fontSizeMap: Record<string, string> = {
-    small: '20px',
+    small: '24px',
     medium: '32px',
-    large: '42px',
-    'extra-large': '52px',
+    large: '48px',
+    'extra-large': '60px',
   };
   const fontSizePx = parseFloat(fontSizeMap[fontSize] || '22px');
   const lineHeight = fontSizePx * 2; // matches lineHeight: 2 below
@@ -172,7 +172,7 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
   const containerHeight = isMulti ? lineHeight * VISIBLE_ROWS : fontSizePx * 2;
 
   return (
-    <div style={{ width: isMulti ? '1000px' : '1000px', maxWidth: '90vw' }}>
+    <div style={{ width: '1100px', maxWidth: '92vw' }}>
       <input
         ref={inputRef}
         type="text"
