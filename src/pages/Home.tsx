@@ -8,7 +8,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { FunboxBadge } from '../components/Funbox/FunboxBadge';
 
 export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; onOpenSettings?: () => void }) {
-  const { currentInput, timeRemaining, liveWpm, liveAccuracy, handleKeyPress, handleRestart } = useTypingTest();
+  const { currentInput, timeRemaining, liveWpm, liveAccuracy, handleKeyPress, handleRestart, ghostCharIndex } = useTypingTest();
   const { isComplete, isActive, mode, timeLimit, restartSignal } = useTestStore();
   const { showLiveWpm, showLiveAccuracy, showTimer } = useSettingsStore();
 
@@ -104,7 +104,7 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
           )}
 
           {/* Typing area */}
-          <TypingArea onKeyPress={handleKeyPress} currentInput={currentInput} />
+          <TypingArea onKeyPress={handleKeyPress} currentInput={currentInput} ghostCharIndex={ghostCharIndex} />
 
           {/* Keyboard hints */}
           <div

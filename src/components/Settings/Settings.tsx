@@ -179,6 +179,53 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
             />
           </Section>
 
+          <Section title="Minimum Thresholds">
+            <Toggle
+              label="Min Speed"
+              value={settings.minSpeedEnabled}
+              onChange={(v) => settings.updateSettings({ minSpeedEnabled: v })}
+              description="Auto-restart when WPM drops below threshold"
+            />
+            {settings.minSpeedEnabled && (
+              <OptionRow label={`Min WPM: ${settings.minSpeed}`}>
+                <input
+                  type="range"
+                  min={10}
+                  max={200}
+                  step={5}
+                  value={settings.minSpeed}
+                  onChange={(e) => settings.updateSettings({ minSpeed: Number(e.target.value) })}
+                  style={{ accentColor: 'var(--main)', width: 160 }}
+                />
+              </OptionRow>
+            )}
+            <Toggle
+              label="Min Accuracy"
+              value={settings.minAccuracyEnabled}
+              onChange={(v) => settings.updateSettings({ minAccuracyEnabled: v })}
+              description="Auto-restart when accuracy drops below threshold"
+            />
+            {settings.minAccuracyEnabled && (
+              <OptionRow label={`Min Acc: ${settings.minAccuracy}%`}>
+                <input
+                  type="range"
+                  min={50}
+                  max={100}
+                  step={1}
+                  value={settings.minAccuracy}
+                  onChange={(e) => settings.updateSettings({ minAccuracy: Number(e.target.value) })}
+                  style={{ accentColor: 'var(--main)', width: 160 }}
+                />
+              </OptionRow>
+            )}
+            <Toggle
+              label="Ghost Mode"
+              value={settings.ghostMode}
+              onChange={(v) => settings.updateSettings({ ghostMode: v })}
+              description="Race a ghost caret that moves at your PB speed"
+            />
+          </Section>
+
           {/* Reset */}
           <div className="pt-4" style={{ borderTop: '1px solid var(--bg2)' }}>
             <button

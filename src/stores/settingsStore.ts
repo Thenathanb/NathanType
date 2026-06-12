@@ -49,6 +49,15 @@ const defaultSettings: Settings & { fontId: string; activeFunbox: string | null;
   // Layout
   wordDisplay: 'multi',
 
+  // Min thresholds
+  minSpeedEnabled: false,
+  minSpeed: 80,
+  minAccuracyEnabled: false,
+  minAccuracy: 90,
+
+  // Ghost mode
+  ghostMode: false,
+
   // Favorites
   favoriteThemes: [],
 

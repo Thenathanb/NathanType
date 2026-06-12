@@ -9,11 +9,12 @@ import type { CharState } from '../../types/index.js';
 interface TypingAreaProps {
   onKeyPress: (key: string) => void;
   currentInput: string;
+  ghostCharIndex?: number;
 }
 
 const VISIBLE_ROWS = 3;
 
-export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
+export function TypingArea({ onKeyPress, currentInput, ghostCharIndex = -1 }: TypingAreaProps) {
   const { words, currentWordIndex, typedHistory, isActive, isComplete, mode, quoteSource, contentLoading } = useTestStore();
   const { fontSize, caretStyle, smoothCaret, activeFunbox, wordDisplay } = useSettingsStore();
 
@@ -33,6 +34,7 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
   const [caretPos, setCaretPos] = useState({ left: 0, top: 0 });
 
   const [caretVisible, setCaretVisible] = useState(true);
+  const [ghostCaretPos, setGhostCaretPos] = useState({ left: 0, top: 0, visible: false });
 
   const fontSizeMap: Record<string, string> = {
     small: '24px',
@@ -102,6 +104,29 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
     setTranslateY(newTy);
     setCaretPos({ left: caretX, top: wordTop - newTy + lineHeight * 0.5 });
   }, [currentWordIndex, currentInput, words, wordDisplay, lineHeight]);
+
+  // Ghost caret position
+  useEffect(() => {
+    if (ghostCharIndex < 0 || !wordsRef.current || words.length === 0) {
+      setGhostCaretPos(p => ({ ...p, visible: false }));
+      return;
+    }
+    // Map global char index to (wordIndex, charOffset)
+    let remaining = ghostCharIndex;
+    let ghostWordIdx = 0;
+    for (let i = 0; i < words.length; i++) {
+      const wLen = words[i].length + 1; // +1 for space
+      if (remaining < wLen) { ghostWordIdx = i; break; }
+      remaining -= wLen;
+      ghostWordIdx = i;
+    }
+    const charOffset = Math.min(remaining, words[ghostWordIdx]?.length ?? 0);
+    const wordEl = wordsRef.current.children[ghostWordIdx] as HTMLElement | null;
+    if (!wordEl) { setGhostCaretPos(p => ({ ...p, visible: false })); return; }
+    const gLeft = wordEl.offsetLeft + charOffset * (charWidthRef.current || 0);
+    const gTop = wordEl.offsetTop;
+    setGhostCaretPos({ left: gLeft, top: gTop - translateY, visible: true });
+  }, [ghostCharIndex, words, translateY]);
 
   // Reset on restart
   useEffect(() => {
@@ -232,6 +257,22 @@ export function TypingArea({ onKeyPress, currentInput }: TypingAreaProps) {
                   backgroundColor: 'var(--caret-color)',
                   opacity: caretVisible ? 1 : 0,
                   transition: smoothCaret ? 'left 0.06s ease-out, top 0.15s ease-out' : 'none',
+                  pointerEvents: 'none',
+                  borderRadius: 1,
+                }}
+              />
+            )}
+            {isActive && !isComplete && ghostCaretPos.visible && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${ghostCaretPos.left}px`,
+                  top: `${ghostCaretPos.top + lineHeight * 0.5 - fontSizePx * 0.65}px`,
+                  width: 2,
+                  height: `${fontSizePx * 1.3}px`,
+                  backgroundColor: 'var(--sub)',
+                  opacity: 0.5,
+                  transition: smoothCaret ? 'left 0.3s ease-out, top 0.3s ease-out' : 'none',
                   pointerEvents: 'none',
                   borderRadius: 1,
                 }}

@@ -59,6 +59,7 @@ export function useTypingTest() {
     punctuation,
     numbers,
     activeFunbox,
+    ghostMode,
   } = useSettingsStore();
 
   const { addTestResult } = useUserStore();
@@ -525,6 +526,9 @@ export function useTypingTest() {
   const handleTestCompleteRef = useRef(handleTestComplete);
   useEffect(() => { handleTestCompleteRef.current = handleTestComplete; });
 
+  // Stable ref for handleRestart (defined later; updated after each render)
+  const handleRestartRef = useRef<() => void>(() => {});
+
   // Timer for time mode — also fires for meme/songs when format is time
   useEffect(() => {
     const isTimeBased = mode === 'time' ||
@@ -555,14 +559,23 @@ export function useTypingTest() {
           n + w.charStates.filter(s => s === 'incorrect' || s === 'extra').length, 0);
         const errorsThisSecond = Math.max(0, totalErrors - prevErrorsRef.current);
         prevErrorsRef.current = totalErrors;
+        const currentWpm = calculateWpm(th, elapsed);
+        const currentAcc = calculateAccuracy(th);
         const dataPoint: WpmDataPoint = {
           time: elapsed / 1000,
-          wpm: calculateWpm(th, elapsed),
+          wpm: currentWpm,
           rawWpm: calculateRawWpm(th, elapsed),
-          accuracy: calculateAccuracy(th),
+          accuracy: currentAcc,
           errors: errorsThisSecond,
         };
         addWpmDataPoint(dataPoint);
+
+        // Auto-restart if below min thresholds (only after typing for at least 3s)
+        const { minSpeedEnabled: mse, minSpeed: ms, minAccuracyEnabled: mae, minAccuracy: ma } = useSettingsStore.getState();
+        if (elapsed >= 3000) {
+          if (mse && currentWpm > 0 && currentWpm < ms) { handleRestartRef.current(); return; }
+          if (mae && th.length >= 3 && currentAcc < ma) { handleRestartRef.current(); return; }
+        }
       }, 1000);
       return () => { if (wpmTrackerRef.current) clearInterval(wpmTrackerRef.current); };
     }
@@ -717,6 +730,7 @@ export function useTypingTest() {
     const newWords = generateTestWords(mode, { wordLimit, timeLimit, punctuation, numbers });
     setWords(getActiveFunboxWords(newWords, activeFunbox));
   }, [mode, wordLimit, timeLimit, punctuation, numbers, customText, activeFunbox]);
+  useEffect(() => { handleRestartRef.current = handleRestart; });
 
   const handleCancel = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -730,6 +744,19 @@ export function useTypingTest() {
     setWords(newWords);
   }, [mode, wordLimit, timeLimit, punctuation, numbers]);
 
+  // Ghost caret: global char index the ghost should have reached based on PB WPM
+  const pbMode = mode === 'time' ? 'time' : mode === 'words' ? 'words' : null;
+  const pbMode2 = String(mode === 'time' ? timeLimit : wordLimit);
+  const pbWpm = pbMode && userProfile ? (getPbEntry(userProfile, pbMode, pbMode2)?.wpm ?? 0) : 0;
+
+  const ghostCharIndex = useMemo(() => {
+    if (!ghostMode || !isActive || pbWpm <= 0) return -1;
+    const { startTime } = useTestStore.getState();
+    if (!startTime) return -1;
+    const elapsedMin = (Date.now() - startTime) / 60000;
+    return Math.floor(pbWpm * 5 * elapsedMin);
+  }, [ghostMode, isActive, pbWpm, liveWpm]); // liveWpm re-runs this every second
+
   return {
     currentInput,
     timeRemaining,
@@ -738,5 +765,6 @@ export function useTypingTest() {
     handleKeyPress,
     handleRestart,
     handleCancel,
+    ghostCharIndex,
   };
 }

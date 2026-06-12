@@ -146,6 +146,15 @@ export interface Settings {
   // Layout
   wordDisplay: 'scroll' | 'multi';
 
+  // Min thresholds (auto-restart)
+  minSpeedEnabled: boolean;
+  minSpeed: number;
+  minAccuracyEnabled: boolean;
+  minAccuracy: number;
+
+  // Ghost mode
+  ghostMode: boolean;
+
   // Favorites
   favoriteThemes: string[];
 }
