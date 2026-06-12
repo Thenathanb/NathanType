@@ -98,6 +98,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 function BehaviorSection() {
   const {
     difficulty, blindMode, stopOnError, confidenceMode, quickEnd, resultSaving,
+    minSpeedEnabled, minSpeed, minAccuracyEnabled, minAccuracy, ghostMode,
     updateSettings,
   } = useSettingsStore();
 
@@ -138,6 +139,38 @@ function BehaviorSection() {
       <SettingRow name="result saving" description="automatically save test results to your account">
         <OptionBtn active={!resultSaving} onClick={() => updateSettings({ resultSaving: false })}>off</OptionBtn>
         <OptionBtn active={resultSaving}  onClick={() => updateSettings({ resultSaving: true })}>on</OptionBtn>
+      </SettingRow>
+      <SettingRow name="min speed" description="auto-restart when wpm falls below threshold">
+        <OptionBtn active={!minSpeedEnabled} onClick={() => updateSettings({ minSpeedEnabled: false })}>off</OptionBtn>
+        <OptionBtn active={minSpeedEnabled}  onClick={() => updateSettings({ minSpeedEnabled: true })}>on</OptionBtn>
+        {minSpeedEnabled && (
+          <div className="flex items-center gap-3 ml-4">
+            <input
+              type="range" min={10} max={200} step={5} value={minSpeed}
+              onChange={e => updateSettings({ minSpeed: Number(e.target.value) })}
+              style={{ accentColor: 'var(--main)', width: 120 }}
+            />
+            <span className="font-mono" style={{ color: 'var(--text)', fontSize: 14, minWidth: 40 }}>{minSpeed} wpm</span>
+          </div>
+        )}
+      </SettingRow>
+      <SettingRow name="min accuracy" description="auto-restart when accuracy falls below threshold">
+        <OptionBtn active={!minAccuracyEnabled} onClick={() => updateSettings({ minAccuracyEnabled: false })}>off</OptionBtn>
+        <OptionBtn active={minAccuracyEnabled}  onClick={() => updateSettings({ minAccuracyEnabled: true })}>on</OptionBtn>
+        {minAccuracyEnabled && (
+          <div className="flex items-center gap-3 ml-4">
+            <input
+              type="range" min={50} max={100} step={1} value={minAccuracy}
+              onChange={e => updateSettings({ minAccuracy: Number(e.target.value) })}
+              style={{ accentColor: 'var(--main)', width: 120 }}
+            />
+            <span className="font-mono" style={{ color: 'var(--text)', fontSize: 14, minWidth: 40 }}>{minAccuracy}%</span>
+          </div>
+        )}
+      </SettingRow>
+      <SettingRow name="ghost mode" description="race a ghost caret that moves at your personal best speed">
+        <OptionBtn active={!ghostMode} onClick={() => updateSettings({ ghostMode: false })}>off</OptionBtn>
+        <OptionBtn active={ghostMode}  onClick={() => updateSettings({ ghostMode: true })}>on</OptionBtn>
       </SettingRow>
     </section>
   );
