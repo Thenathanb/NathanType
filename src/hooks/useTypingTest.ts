@@ -601,6 +601,9 @@ export function useTypingTest() {
   }, [mode, currentWordIndex, words.length, currentInput, isActive, isComplete, quickEnd, contentFormatType]);
 
   const handleKeyPress = useCallback((key: string, isError = false) => {
+    // Normalize capital I → lowercase i
+    if (key === 'I') key = 'i';
+
     // Escape — cancel the test
     if (key === 'Escape') {
       handleCancel();
