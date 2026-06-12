@@ -47,7 +47,7 @@ export function generateWords(
       const numLength = Math.floor(Math.random() * 3) + 1; // 1-3 digits
       word = Array.from({ length: numLength }, () => randomItem(numberRange)).join('');
     } else {
-      word = randomItem(wordList);
+      word = randomItem(wordList).toLowerCase();
     }
 
     // Add punctuation if enabled
