@@ -38,25 +38,35 @@ export function ThemeCard({ theme, active, onClick }: ThemeCardProps) {
         width: '100%',
         position: 'relative',
       }}
-      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+      onMouseEnter={e => {
+        if (!active) (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)';
+        const star = e.currentTarget.querySelector('.fav-star') as HTMLElement | null;
+        if (star && !isFav) star.style.opacity = '0.6';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+        const star = e.currentTarget.querySelector('.fav-star') as HTMLElement | null;
+        if (star && !isFav) star.style.opacity = '0';
+      }}
     >
       {/* Favorite star */}
       <span
         role="button"
         onClick={toggleFav}
         title={isFav ? 'remove from favorites' : 'add to favorites'}
+        className="fav-star"
         style={{
           position: 'absolute',
-          top: 4,
-          right: 6,
-          fontSize: 11,
-          color: isFav ? theme.main : theme.sub,
-          opacity: isFav ? 1 : 0.4,
+          top: 5,
+          right: 7,
+          fontSize: 14,
+          color: isFav ? theme.main : theme.text,
+          opacity: isFav ? 1 : 0,
           lineHeight: 1,
           cursor: 'pointer',
           userSelect: 'none',
           zIndex: 1,
+          transition: 'opacity 120ms',
         }}
       >
         {isFav ? '★' : '☆'}
