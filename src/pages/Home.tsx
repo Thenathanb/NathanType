@@ -9,7 +9,7 @@ import { FunboxBadge } from '../components/Funbox/FunboxBadge';
 
 export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; onOpenSettings?: () => void }) {
   const { currentInput, timeRemaining, liveWpm, liveAccuracy, handleKeyPress, handleRestart, ghostCharIndex } = useTypingTest();
-  const { isComplete, isActive, mode, timeLimit, restartSignal } = useTestStore();
+  const { isComplete, isActive, mode, timeLimit, wordLimit, currentWordIndex, restartSignal } = useTestStore();
   const { showLiveWpm, showLiveAccuracy, showTimer } = useSettingsStore();
 
   const prevSignal = useRef(restartSignal);
@@ -100,6 +100,19 @@ export function Home({ onOpenAuth, onOpenSettings }: { onOpenAuth?: () => void; 
               style={{ color: 'var(--main)', fontSize: 13, marginBottom: 8 }}
             >
               {isActive ? timeRemaining : timeLimit}
+            </div>
+          )}
+
+          {/* Word counter (words mode) */}
+          {mode === 'words' && (
+            <div
+              className={`font-mono tabular-nums transition-all duration-200 ${
+                isActive ? 'opacity-100' : 'opacity-60'
+              }`}
+              style={{ fontSize: 13, marginBottom: 8 }}
+            >
+              <span style={{ color: 'var(--main)' }}>{isActive ? currentWordIndex : 0}</span>
+              <span style={{ color: 'var(--sub)' }}>/{wordLimit}</span>
             </div>
           )}
 
