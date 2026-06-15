@@ -62,7 +62,7 @@ A modern, feature-rich typing test application inspired by Monkeytype, built wit
 
 **Option 1 — Use it directly in your browser (no setup required):**
 
-👉 [thenathanb.github.io/NathanType](https://thenathanb.github.io/NathanType)
+ [thenathanb.github.io/NathanType](https://thenathanb.github.io/NathanType)
 
 **Option 2 — Run it locally:**
 
