@@ -60,9 +60,15 @@ A modern, feature-rich typing test application inspired by Monkeytype, built wit
 
 ### Installation
 
+**Option 1 — Use it directly in your browser (no setup required):**
+
+👉 [thenathanb.github.io/NathanType](https://thenathanb.github.io/NathanType)
+
+**Option 2 — Run it locally:**
+
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/nathantype.git
+git clone https://github.com/Thenathanb/NathanType.git
 cd nathantype
 
 # Install dependencies
